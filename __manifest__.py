@@ -22,11 +22,11 @@
         'sale'
     ],
     'data': [
-        'views/portal_templates.xml',
+        # 'views/portal_templates.xml',
         'views/charging_session_invoice.xml',
         'security/ir.model.access.csv',
         'data/user_automations.xml',
-        'data/partner_user_integrity_cron.xml'
+        'data/partner_user_integrity_cron.xml',
         'data/uom_data.xml'
     ],
     'external_dependencies': {
@@ -39,6 +39,6 @@
     },
     'application': False,
     'installable': True,
-    'auto_install': True,
+    'auto_install': False,
     'post_init_hook': '_set_parameters_init_hook',
 }
