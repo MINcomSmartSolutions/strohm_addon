@@ -75,6 +75,7 @@ class ChargingSessionInvoice(models.TransientModel):
     def ensure_standard_products(self):
         """
         Ensure all standard products exist in the database.
+        Will fail if Fiscal Localization is not set to Germany.
 
         Returns:
             dict: Dictionary mapping product SKUs to product records
@@ -119,16 +120,33 @@ class ChargingSessionInvoice(models.TransientModel):
 
                 # Create product
                 _logger.info(f"Creating product with SKU: {sku}, name: {data.get('name', sku) }")
-                country = self.env.ref('base.de', raise_if_not_found=False) or self.env.ref['res.country'].search(
-                    [('code', '=', 'DE')], limit=1)
 
-                # Use ref when possible instead of search
+                # Fix: Proper way to get the German country
+                country = self.env.ref('base.de', raise_if_not_found=False)
+                if not country:
+                    country = self.env['res.country'].search([('code', '=', 'DE')], limit=1)
+
+                if not country:
+                    raise UserError(_("Could not find country Germany (DE) in the database."))
+
+                # Try to find the German 19% VAT tax.
+                # First try with xmlid reference
                 tax = self.env.ref('l10n_de.tax_sale_19', raise_if_not_found=False)
+
+                # If that fails, search more broadly
                 if not tax:
                     tax = self.env['account.tax'].search([
                         ('amount', '=', 19),
-                        ('price_include', '=', True),
+                        ('type_tax_use', '=', 'sale'),
                         ('country_id', '=', country.id),
+                    ], limit=1)
+
+                # If still not found, try without country filter?
+                # Skeptical about this, but let's keep it for now
+                if not tax:
+                    tax = self.env['account.tax'].search([
+                        ('amount', '=', 19),
+                        ('type_tax_use', '=', 'sale'),
                     ], limit=1)
 
                 if not tax:
@@ -150,7 +168,7 @@ class ChargingSessionInvoice(models.TransientModel):
                     # - `tax.ids` is the list of IDs to set.
                     #
                     # So, `[(6, 0, tax.ids)]` means: replace all current tax records with the ones in `tax.ids`.
-                    'tax_ids': [(6, 0, tax.ids)],
+                    'taxes_id': [(6, 0, tax.ids)],
                 })
 
                 self.env.cr.commit()  # Commit product creation
