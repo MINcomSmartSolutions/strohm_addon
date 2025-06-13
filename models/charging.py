@@ -64,7 +64,8 @@ class ChargingSessionInvoice(models.TransientModel):
 
         invoice = AccountMove.create(move_vals)
 
-        # post immediately
+        # TODO: post immediately
+
         # invoice.action_post()
 
         #TODO: charge the user with their default payment method???

@@ -16,7 +16,7 @@ from cryptography.hazmat.primitives.kdf.pbkdf2 import PBKDF2HMAC
 from pydantic import ValidationError as PydanticValidationError
 
 from odoo import http, fields
-from odoo.exceptions import ValidationError
+from odoo.exceptions import ValidationError, AccessDenied
 from odoo.http import request, Controller
 from ..schemas.validation import (
     UserCreate, ApiKeyRotation, PaymentMethodCheck,
@@ -411,6 +411,7 @@ class StrohmAPI(Controller):
                 'Auto-generated User API key',  # name
                 None  # TODO: Set a viable expiration_date
             )
+            _logger.info(f"🔑 Generated API key for user {user.id}: {api_key}")
 
             # Encrypt API key for transport, this encryption is done by us (independent of odoo framework)
             encrypted_token_data = self._encrypt_api_key(api_key)
@@ -457,10 +458,10 @@ class StrohmAPI(Controller):
             decrypted_key = self._decrypt_api_key(validated_data.key, validated_data.key_salt)
             _logger.debug('🔑 User API key decrypted successfully')
 
-            # Continue with the existing validation logic
+            # Directly check the API key
             user_id = request.env['res.users.apikeys'].sudo()._check_credentials(scope='rpc', key=decrypted_key)
             if not user_id:
-                raise ValidationError("Invalid API key")
+                raise AccessDenied("Invalid API key")
 
             # Create the message that was used for the signature
             message = f"{validated_data.timestamp}{user_id}{validated_data.key}{validated_data.key_salt}{validated_data.salt}"
@@ -473,28 +474,47 @@ class StrohmAPI(Controller):
             if not user.exists():
                 return request.make_json_response({'error': 'User not found'}, status=404)
 
+            # Set up environment for authentication
             request.httprequest.environ['wsgi.interactive'] = False
-            # Changed 'token' to 'password' to match Odoo's expectation
-            credential = {'login': user.login, 'password': decrypted_key, 'type': 'webauthn'}
-            request.session.authenticate(request.env.cr.dbname, credential)
-            _logger.debug('🔑 User session authenticated successfully')
 
-            # TODO: Do we need to create session everytime we login?
-            # TODO: odoo.addons.base.models.res_device
-            request.env.user = user
-            request.session.session_token = user._compute_session_token(request.session.sid)
-            request.session.uid = user.id
-            request.session.login = user.login
-            request.session.context = dict(request.session.context, uid=user.id)
+            try:
+                # Direct session setup without using authenticate
+                # This bypasses the _check_credentials validation that requires type='password'
+                request.session.uid = user.id
+                request.session.login = user.login
+                request.session.session_token = user._compute_session_token(request.session.sid)
+                request.session.context = dict(request.session.context, uid=user.id)
+                request.update_env(user=user)
 
-            # Get the redirect path (default to portal home page)
-            redirect_path = kw.get('redirect', '/my')
+                _logger.debug('🔑 User session set up successfully')
 
-            # Redirect user directly to the portal page
-            return werkzeug.utils.redirect(redirect_path)
+                # Register this device/session for enhanced security tracking
+                if hasattr(request.env['res.users'], '_register_device'):
+                    try:
+                        request.env['res.users']._register_device()
+                    except Exception as e:
+                        _logger.warning(f"Failed to register device during portal login: {str(e)}")
 
+                # Get the redirect path (default to portal home page)
+                redirect_path = kw.get('redirect', '/my')
+
+                # Update the last login timestamp
+                user.sudo()._update_last_login()
+
+                # Redirect user directly to the portal page
+                return werkzeug.utils.redirect(redirect_path)
+
+            except AccessDenied as ade:
+                _logger.warning(f"Access denied during portal login: {str(ade)}", exc_info=True, stack_info=True)
+                return request.make_json_response({'error': str(ade)}, status=500)
+            except Exception as e:
+                _logger.error(f"Portal login error: {str(e)}", exc_info=True, stack_info=True)
+                return request.make_json_response({'error': str(e)}, status=500)
         except ValidationError as ve:
             return request.make_json_response({'error': str(ve)}, status=400)
+        except AccessDenied as ade:
+            _logger.warning(f"Access denied, portal login: {str(ade)}", exc_info=True, stack_info=True)
+            return request.make_json_response({'error': str(ade)}, status=401)
         except Exception as e:
             _logger.error(f"Portal login error: {str(e)}", exc_info=True, stack_info=True)
             return request.make_json_response({'error': str(e)}, status=500)
@@ -532,7 +552,7 @@ class StrohmAPI(Controller):
             decrypted_key = self._decrypt_api_key(validated_data.key, validated_data.key_salt)
             _logger.debug('🔑 API key decrypted successfully')
 
-            # Continue with the existing validation logic
+            # Directly check the API key
             user_id = request.env['res.users.apikeys'].sudo()._check_credentials(scope='rpc', key=decrypted_key)
             if not user_id:
                 raise ValidationError("Invalid API key")
@@ -551,15 +571,6 @@ class StrohmAPI(Controller):
                 raise ValidationError("Invalid API key")
 
             _logger.debug(f"User ID: {user_id}")
-
-            request.httprequest.environ['wsgi.interactive'] = False
-
-            # Changed 'token' to 'password' to match Odoo's expectation
-            credential = {'login': user.login, 'password': decrypted_key, 'type': 'webauthn'}
-
-            # Proper authentication
-            request.session.authenticate(request.env.cr.dbname, credential)
-            _logger.debug('🔑 User authenticated successfully')
 
             # Generate the bill using the model method
             bill = request.env['charging.session.invoice'].sudo().generate(session_start,
