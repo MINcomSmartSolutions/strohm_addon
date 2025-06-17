@@ -33,3 +33,8 @@ class CustomCustomerPortal(CustomerPortal):
             'X-Frame-Options': 'SAMEORIGIN',
             'Content-Security-Policy': "frame-ancestors 'self'",
         })
+
+    def _prepare_portal_layout_values(self):
+        portal_layout_values = super()._prepare_portal_layout_values()
+        portal_layout_values['payment_active'] = request.env['payment.token'].sudo().search_count([('partner_id', '=', request.env.user.partner_id.id), ('active', '=', True)]) > 0
+        return portal_layout_values
