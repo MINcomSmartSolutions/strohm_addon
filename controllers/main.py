@@ -150,6 +150,9 @@ class StrohmAPI(Controller):
             return False
 
         token = auth_header.split(' ')[1]
+        if not token:
+            _logger.debug("❌ No token provided in Authorization header.")
+            return False
 
         # Verify token using _check_credentials
         admin_id = request.env['res.users.apikeys'].sudo()._check_credentials(scope='rpc', key=token)
