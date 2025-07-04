@@ -18,11 +18,10 @@
         'l10n_de',
         'portal',
         'payment',
-        'payment_stripe',
         'sale'
     ],
     'data': [
-        # 'views/portal_templates.xml',
+        'views/portal_templates.xml',
         'views/charging_session_invoice.xml',
         'security/ir.model.access.csv',
         'data/user_automations.xml',

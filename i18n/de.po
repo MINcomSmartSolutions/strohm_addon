@@ -7,3 +7,9 @@ msgstr "Energie"
 #: model:uom.uom,name:strohm_addon.product_uom_kwh
 msgid "kWh"
 msgstr "kWh"
+
+#. module: strohm_addon
+#: model_terms:ir.ui.view,arch_db:strohm_addon.portal_payment_method_alert
+msgid "There are currently no active payment methods for your account."
+msgstr "Derzeit sind keine aktiven Zahlungsmethoden für Ihr Konto verfügbar."
+
