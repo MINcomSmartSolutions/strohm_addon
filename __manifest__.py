@@ -13,6 +13,8 @@
     'website': 'https://min2sol.com',
     'depends': [
         'account',
+        'auth_totp',
+        'auth_totp_portal',
         'base',
         'base_automation',
         'l10n_de',
@@ -26,7 +28,7 @@
         'security/ir.model.access.csv',
         'data/user_automations.xml',
         'data/partner_user_integrity_cron.xml',
-        'data/uom_data.xml'
+        'data/uom_data.xml',
     ],
     'external_dependencies': {
         'python': [

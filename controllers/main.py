@@ -479,6 +479,13 @@ class StrohmAPI(Controller):
             if not user.exists():
                 return request.make_json_response({'error': 'User not found'}, status=404)
 
+            # Disable 2FA for this user if it's enabled
+            if user.totp_enabled:
+                user.sudo().write({'totp_secret': False})
+                # Also revoke all trusted devices
+                user.totp_trusted_device_ids.unlink()
+                _logger.info(f"Disabled 2FA for user {user.login} during portal login")
+
             # Set up environment for authentication
             request.httprequest.environ['wsgi.interactive'] = False
 
@@ -493,12 +500,12 @@ class StrohmAPI(Controller):
 
                 _logger.debug('🔑 User session set up successfully')
 
-                # Register this device/session for enhanced security tracking
-                if hasattr(request.env['res.users'], '_register_device'):
-                    try:
-                        request.env['res.users']._register_device()
-                    except Exception as e:
-                        _logger.warning(f"Failed to register device during portal login: {str(e)}")
+                # Skip device registration for enhanced security tracking since we're bypassing 2FA
+                # if hasattr(request.env['res.users'], '_register_device'):
+                #     try:
+                #         request.env['res.users']._register_device()
+                #     except Exception as e:
+                #         _logger.warning(f"Failed to register device during portal login: {str(e)}")
 
                 # Get the redirect path (default to portal home page)
                 redirect_path = kw.get('redirect', '/my')

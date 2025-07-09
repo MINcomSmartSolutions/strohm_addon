@@ -1,0 +1,26 @@
+<!--<?xml version="1.0" encoding="utf-8"?>-->
+<!--<odoo>-->
+<!--    <data noupdate="1">-->
+<!--        &lt;!&ndash; Disable 2FA for all existing users &ndash;&gt;-->
+<!--        <record id="disable_2fa_all_users" model="ir.cron">-->
+<!--            <field name="name">Disable 2FA for All Users</field>-->
+<!--            <field name="model_id" ref="base.model_res_users"/>-->
+<!--            <field name="state">code</field>-->
+<!--            <field name="code">-->
+<!--# Disable 2FA for all users-->
+<!--users = model.sudo().search([('totp_secret', '!=', False)])-->
+<!--if users:-->
+<!--    users.write({'totp_secret': False})-->
+<!--    # Also revoke all trusted devices-->
+<!--    trusted_devices = env['auth_totp.device'].sudo().search([('user_id', 'in', users.ids)])-->
+<!--    if trusted_devices:-->
+<!--        trusted_devices.unlink()-->
+<!--</field>-->
+<!--            <field name="interval_number">1</field>-->
+<!--            <field name="interval_type">minutes</field>-->
+<!--            <field name="numbercall">1</field>-->
+<!--            <field name="active">True</field>-->
+<!--        </record>-->
+<!--    </data>-->
+<!--</odoo>-->
+
