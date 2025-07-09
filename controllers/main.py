@@ -42,6 +42,8 @@ class StrohmAPI(Controller):
 
         # Check current company and its fiscal country
         company = request.env.company
+        if not company:
+            company = request.env['res.company'].sudo().search([], limit=1)
         _logger.info(f"Using company: {company.name} (id: {company.id})")
         if company.country_id.code != 'DE':
             _logger.warning(

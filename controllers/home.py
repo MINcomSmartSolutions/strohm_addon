@@ -16,8 +16,14 @@ _logger = logging.getLogger(__name__)
 
 class CustomHome(Home):
     def __init__(self):
+        backend_port = os.environ.get('BACKEND_PORT', '3000')
         self.ODOO_ENV = os.environ.get('ODOO_ENV')
-        self.BACKEND_URL = f"http://localhost:{os.environ.get('BACKEND_PORT')}"
+        self.BACKEND_URL = f"http://localhost:{backend_port}"
+
+        if not self.ODOO_ENV:
+            _logger.warning("ODOO_ENV not set, defaulting to 'prod'")
+            self.ODOO_ENV = 'prod'
+
 
     def _validate_redirect(self, redirect_url):
         """Validate that redirect URL is safe"""
@@ -25,7 +31,6 @@ class CustomHome(Home):
         allowed_hosts = ['yourdomain.com', 'othertrusted.com']
 
         # Allow any redirect in debug mode for development convenience
-
         if self.ODOO_ENV == 'dev' or self.ODOO_ENV == 'test':
             return True
 
