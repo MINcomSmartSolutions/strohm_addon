@@ -225,11 +225,20 @@ class StrohmAPI(Controller):
 
     def _check_valid_payment_method(self, partner_id):
         """Check if user has a valid payment method"""
+        if not partner_id:
+            _logger.debug("No partner ID provided, cannot check payment method")
+            return False
+
         _logger.debug(f"Checking if partner {partner_id} has a valid payment method")
-        payment_token = request.env['payment.token'].sudo().search(
-            [('partner_id', '=', partner_id), ('active', '=', True)], limit=1
-        )
-        return bool(payment_token and payment_token.exists())
+
+        try:
+            payment_token = request.env['payment.token'].sudo().search(
+                [('partner_id', '=', partner_id), ('active', '=', True)], limit=1
+            )
+            return bool(payment_token and payment_token.exists())
+        except Exception as e:
+            _logger.error(f"Error checking payment method for partner {partner_id}: {str(e)}", exc_info=True)
+            return False
 
     @http.route('/internal/test', type='http', auth='public', methods=['GET'], csrf=False)
     def test(self, **kw):
