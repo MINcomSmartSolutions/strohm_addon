@@ -1,0 +1,31 @@
+name: Trigger Odoo Image Build
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  trigger-build:
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: read
+      actions: write
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Trigger main image build
+        uses: peter-evans/repository-dispatch@v3
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          event-type: strohm-addon-changed
+          client-payload: |
+            {
+              "ref": "${{ github.ref }}",
+              "sha": "${{ github.sha }}",
+              "addon": "strohm_addon",
+              "changed_files": "${{ github.event.head_commit.modified }}"
+            }
