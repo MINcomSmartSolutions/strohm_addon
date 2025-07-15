@@ -603,3 +603,31 @@ class StrohmAPI(Controller):
         except Exception as error:
             _logger.error(f"Bill creation error: {str(error)}", exc_info=True, stack_info=True)
             return request.make_json_response({'error': str(error)}, status=500)
+
+    @http.route('/internal/admin/connection-check', type='http', auth='public', methods=['GET'], csrf=False)
+    def admin_connection_check(self, **kw):
+        """
+        Simple endpoint to check admin connection validity.
+        Returns success if admin token is valid, error otherwise.
+        """
+        try:
+            # Validate admin token
+            if not self._validate_admin_token(request.httprequest.headers):
+                return request.make_json_response({
+                    'success': False,
+                    'error': 'Invalid or missing admin token'
+                }, status=401)
+
+            # If we get here, the admin token is valid
+            return request.make_json_response({
+                'success': True,
+                'message': 'Admin connection is valid',
+                'timestamp': datetime.utcnow().strftime(self.datetime_format)
+            }, status=200)
+
+        except Exception as e:
+            _logger.error(f"Admin connection check error: {str(e)}", exc_info=True, stack_info=True)
+            return request.make_json_response({
+                'success': False,
+                'error': 'Internal server error'
+            }, status=500)
