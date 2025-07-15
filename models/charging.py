@@ -41,7 +41,8 @@ class ChargingSessionInvoice(models.TransientModel):
         invoice_lines = []
         for data in lines_data:
             # Find product (but don't create or modify it)
-            product = self._get_or_create_product(data)
+            product = self.sudo()._get_or_create_product(data)
+
 
             # Build the invoice line vals - use direct attribute access instead of .get()
             qty = data.quantity
@@ -50,6 +51,7 @@ class ChargingSessionInvoice(models.TransientModel):
                 'product_id': product.id,
                 'quantity': qty,
                 'price_unit': price_unit,
+                'tax_ids': [(6, 0, product.taxes_id.ids)],  # Copy taxes from product
             }))
 
         # Create the draft customer invoice

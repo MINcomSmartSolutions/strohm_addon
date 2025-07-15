@@ -64,6 +64,9 @@ class StrohmAPI(Controller):
         # Initialize standard products during API startup
         self._ensure_standard_products()
 
+        # Initialize accounting user for invoice operations
+        self.accounting_user_id = self._ensure_accounting_user()
+
         self.API_SECRET = os.environ.get('ODOO_API_SECRET')
         if not self.API_SECRET:
             _logger.error("API secret not found in environment variables. Please set ODOO_API_SECRET")
@@ -80,6 +83,129 @@ class StrohmAPI(Controller):
 
         except Exception as e:
             _logger.error(f"Failed to initialize standard products: {str(e)}", exc_info=True)
+
+    def _ensure_accounting_user(self):
+        """Ensure an accounting user exists for invoice operations"""
+        try:
+            _logger.info("Ensuring accounting user exists for invoice operations")
+
+            # Get current company
+            company = request.env.company
+            if not company:
+                company = request.env['res.company'].sudo().search([], limit=1)
+
+            # Create accounting user name based on company
+            accounting_user_name = f"{company.name} Buchhaltung"
+            accounting_user_login = f"accounting_{company.id}@{company.name.lower().replace(' ', '_')}.internal"
+
+            # Check if accounting user already exists
+            accounting_user = request.env['res.users'].sudo().search([
+                ('login', '=', accounting_user_login)
+            ], limit=1)
+
+            if accounting_user:
+                _logger.info(f"Accounting user already exists: {accounting_user.name} (ID: {accounting_user.id})")
+                return accounting_user.id
+
+            # Create partner for the accounting user
+            partner_vals = {
+                'name': accounting_user_name,
+                'email': accounting_user_login,
+                'is_company': False,
+                'supplier_rank': 0,
+                'customer_rank': 0,
+                'company_id': company.id,
+                'lang': 'de_DE',
+                'tz': 'Europe/Berlin',
+            }
+
+            partner = request.env['res.partner'].sudo().create(partner_vals)
+            _logger.info(f"Created accounting partner: {partner.name} (ID: {partner.id})")
+
+            # Get required groups for accounting operations
+            account_user_group = request.env.ref('account.group_account_user')
+            account_invoice_group = request.env.ref('account.group_account_invoice')
+            base_user_group = request.env.ref('base.group_user')
+
+            # Verify groups exist
+            if not account_user_group:
+                _logger.error("account.group_account_user not found")
+                raise ValidationError("Required accounting group not found")
+            if not account_invoice_group:
+                _logger.error("account.group_account_invoice not found")
+                raise ValidationError("Required invoice group not found")
+            if not base_user_group:
+                _logger.error("base.group_user not found")
+                raise ValidationError("Required base user group not found")
+
+            # Create the accounting user
+            user_vals = {
+                'name': accounting_user_name,
+                'login': accounting_user_login,
+                'email': accounting_user_login,
+                'partner_id': partner.id,
+                'company_id': company.id,
+                'company_ids': [(6, 0, [company.id])],
+                'lang': 'de_DE',
+                'tz': 'Europe/Berlin',
+                'active': True,
+                'groups_id': [(6, 0, [
+                    base_user_group.id,
+                    account_user_group.id,
+                    account_invoice_group.id,
+                ])],
+            }
+
+            accounting_user = request.env['res.users'].sudo().with_context(
+                no_reset_password=True
+            ).create(user_vals)
+
+            _logger.info(f"Created accounting user: {accounting_user.name} (ID: {accounting_user.id})")
+            _logger.info(f"Accounting user groups: {[g.name for g in accounting_user.groups_id]}")
+
+            # Verify the user has the required permissions
+            try:
+                # Test if user can create account.move records
+                test_env = request.env['account.move'].with_user(accounting_user).sudo()
+                if not test_env.check_access('create', raise_exception=False):
+                    _logger.warning("Accounting user may not have sufficient permissions for account.move creation")
+                else:
+                    _logger.info("Accounting user has proper permissions for account.move creation")
+            except Exception as e:
+                _logger.warning(f"Could not verify accounting user permissions: {str(e)}")
+
+            return accounting_user.id
+
+        except Exception as e:
+            _logger.error(f"Failed to ensure accounting user: {str(e)}", exc_info=True)
+            # Fallback to admin user if creation fails
+            admin_user = request.env['res.users'].sudo().search([('login', '=', 'admin')], limit=1)
+            if admin_user:
+                _logger.warning(f"Falling back to admin user for accounting operations: {admin_user.id}")
+                return admin_user.id
+            else:
+                # Final fallback to superuser
+                _logger.error("No admin user found, falling back to superuser (ID: 1)")
+                return 1
+
+    def _get_accounting_user_id(self):
+        """Get accounting user ID, recreating if necessary"""
+        try:
+            # Check if current accounting user still exists
+            if hasattr(self, 'accounting_user_id') and self.accounting_user_id:
+                accounting_user = request.env['res.users'].sudo().browse(self.accounting_user_id)
+                if accounting_user.exists() and accounting_user.active:
+                    return self.accounting_user_id
+                else:
+                    _logger.warning(f"Accounting user {self.accounting_user_id} no longer exists or is inactive, recreating...")
+
+            # Recreate accounting user if it doesn't exist
+            self.accounting_user_id = self._ensure_accounting_user()
+            return self.accounting_user_id
+
+        except Exception as e:
+            _logger.error(f"Failed to get accounting user ID: {str(e)}", exc_info=True)
+            return 1  # Fallback to superuser
 
     def _encrypt_api_key(self, api_key):
         """Encrypt API key using environment variable secret"""
@@ -244,6 +370,35 @@ class StrohmAPI(Controller):
     def test(self, **kw):
         """Test endpoint"""
         return request.make_json_response({'status': self._check_valid_payment_method(44)}, status=200)
+
+    def _debug_accounting_user(self):
+        """Internal method to verify accounting user setup for debugging"""
+        try:
+            accounting_user_id = self._get_accounting_user_id()
+            accounting_user = request.env['res.users'].sudo().browse(accounting_user_id)
+
+            if not accounting_user.exists():
+                _logger.error(f"Accounting user not found, ID: {accounting_user_id}")
+                return None
+
+            # Test permissions
+            can_create_moves = request.env['account.move'].with_user(accounting_user).sudo().check_access_rights('create', raise_exception=False)
+
+            debug_info = {
+                'id': accounting_user.id,
+                'name': accounting_user.name,
+                'login': accounting_user.login,
+                'active': accounting_user.active,
+                'groups': [g.name for g in accounting_user.groups_id],
+                'can_create_account_moves': can_create_moves
+            }
+            
+            _logger.debug(f"Accounting user debug info: {debug_info}")
+            return debug_info
+
+        except Exception as e:
+            _logger.error(f"Debug accounting user error: {str(e)}", exc_info=True, stack_info=True)
+            return None
 
     @http.route('/internal/user/valid_pm', type='http', auth='public', methods=['POST'], csrf=False)
     def check_payment_method(self, **kw):
@@ -578,26 +733,34 @@ class StrohmAPI(Controller):
             if not user_id:
                 raise ValidationError("Invalid API key")
 
-            # Validate user and partner
+            # Get the authenticated user and update the request environment
             user = request.env['res.users'].sudo().browse(user_id)
-            partner_id = user.partner_id.id if user.exists() else None
-            Partner = request.env['res.partner'].sudo().browse(partner_id)
-            if not Partner:
-                _logger.warning('No partner found for user ID %s', user_id)
-                raise ValidationError("Invalid API key")
+            if not user.exists():
+                raise ValidationError("User not found")
 
-            # Ensure partner_id and user_id match the request
-            if partner_id != validated_data.partner_id or user_id != validated_data.user_id:
-                _logger.warning('User ID or Partner ID mismatch in bill creation request')
-                raise ValidationError("Invalid API key")
+            # Update the request environment with the authenticated user
+            request.update_env(user=user)
 
-            _logger.debug(f"User ID: {user_id}")
+            # Now use the environment with the proper user context
+            Partner = request.env['res.partner'].browse(validated_data.partner_id)
+            if not Partner.exists() or Partner.id != user.partner_id.id:
+                raise ValidationError("Invalid partner")
 
-            # Generate the bill using the model method
-            bill = request.env['charging.session.invoice'].sudo().generate(session_start,
-                                                                           session_end,
-                                                                           Partner,
-                                                                           validated_data.lines_data)
+            # Generate the bill using the model method, using accounting user for privileged creation
+            accounting_user_id = self._get_accounting_user_id()
+            accounting_user = request.env['res.users'].sudo().browse(accounting_user_id)
+            if not accounting_user.exists():
+                _logger.error(f"Accounting user with ID {accounting_user_id} not found")
+                raise ValidationError("Accounting user not available")
+
+            _logger.debug(f"Using accounting user: {accounting_user.name} (ID: {accounting_user.id}) for bill creation")
+
+            bill = request.env['charging.session.invoice'].with_user(accounting_user).sudo().generate(
+                session_start,
+                session_end,
+                Partner,
+                validated_data.lines_data
+            )
 
             return request.make_json_response({
                 'success': True,
