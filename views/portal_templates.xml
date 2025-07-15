@@ -27,8 +27,6 @@
         <!-- Modify confirmation numbering -->
         <xpath expr="//section[@name='portal_deactivate_account']//form//p[1]" position="replace">
         </xpath>
-
-
     </template>
 
     <template id="portal_payment_method_alert" inherit_id="portal.portal_my_home" name="Payment Method Alert">
@@ -39,9 +37,13 @@
         </xpath>
     </template>
 
-    <!-- Override the TOTP section -->
-    <!--    <template id="remove_totp" inherit_id="auth_totp_portal.totp_portal_hook" name="Disable TOTP Portal">-->
-    <!--        <xpath expr="//section[@id='portal_totp']" position="replace">-->
-    <!--        </xpath>-->
-    <!--    </template>-->
+    <!-- Completely disable TOTP portal section -->
+    <template id="disable_totp_portal" inherit_id="auth_totp_portal.totp_portal_hook" name="Disable TOTP Portal" active='true'>
+        <xpath expr="//div[@id='totp_wizard_view']" position="replace">
+            <!-- Remove TOTP wizard view -->
+        </xpath>
+        <xpath expr="//section[h4/a[@href='https://www.odoo.com/documentation/master/applications/general/auth/2fa.html']]" position="replace">
+            <!-- Remove entire TOTP section by targeting the documentation link which doesn't change with localization -->
+        </xpath>
+    </template>
 </odoo>
