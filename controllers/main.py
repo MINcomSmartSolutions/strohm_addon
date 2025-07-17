@@ -198,7 +198,8 @@ class StrohmAPI(Controller):
                 if accounting_user.exists() and accounting_user.active:
                     return self.accounting_user_id
                 else:
-                    _logger.warning(f"Accounting user {self.accounting_user_id} no longer exists or is inactive, recreating...")
+                    _logger.warning(
+                        f"Accounting user {self.accounting_user_id} no longer exists or is inactive, recreating...")
 
             # Recreate accounting user if it doesn't exist
             self.accounting_user_id = self._ensure_accounting_user()
@@ -662,21 +663,21 @@ class StrohmAPI(Controller):
                 request.session.session_token = user._compute_session_token(request.session.sid)
                 request.session.context = dict(request.session.context, uid=user.id)
                 request.update_env(user=user)
+                user = user.with_user(user)
+                user._update_last_login()
 
                 _logger.debug('🔑 User session set up successfully')
 
                 # Skip device registration for enhanced security tracking since we're bypassing 2FA
-                # if hasattr(request.env['res.users'], '_register_device'):
-                #     try:
-                #         request.env['res.users']._register_device()
-                #     except Exception as e:
-                #         _logger.warning(f"Failed to register device during portal login: {str(e)}")
+                if hasattr(request.env['res.users'], '_register_device'):
+                    try:
+                        request.env['res.users']._register_device()
+                    except Exception as e:
+                        _logger.warning(f"Failed to register device during portal login: {str(e)}")
 
                 # Get the redirect path (default to portal home page)
                 redirect_path = kw.get('redirect', '/my')
 
-                # Update the last login timestamp
-                user.sudo()._update_last_login()
 
                 # Redirect user directly to the portal page
                 return werkzeug.utils.redirect(redirect_path)
