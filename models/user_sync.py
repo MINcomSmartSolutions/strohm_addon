@@ -15,6 +15,12 @@ class UserSync(models.Model):
     _name = 'strohm_addon.user_sync'
     _description = 'User Sync with Backend'
 
+    # DISCLAIMER: THE MODEL IS ERROR PRONE AND SHOULD NOT BE USED IN PRODUCTION
+    # THIS MODEL IS USED TO SYNC PARTNER/USER CHANGES TO THE BACKEND SYSTEM
+    #
+    # THE PROBLEM WITH THE ODOO CHANGE TRACKING IS THAT IT IS BROAD AND REQUIERE UNENECESSARY DEVELOPMENT TIME
+    # ALL CHANGES SHOULD BE TRACKED BY THE ODOO INTERFACE UNTIL IT ISN'T
+
     @api.model
     def sync_user_changes(self, user_ids, old_values=None):
         """Send user changes to backend system"""
@@ -36,8 +42,38 @@ class UserSync(models.Model):
                         _("Partner for user %s (ID: %s) is missing essential information (name or email).") % (
                             user.name, user.id))
 
+                # Check if this is a portal user deletion (deactivation)
+                old_data = {}
+                if old_values and user.id in old_values:
+                    old_data = old_values[user.id]
+
+                _logger.info(f"Syncing user changes for user {user.id}: {user.name}")
+                _logger.info(f"Old data: {old_data}")
+
+                # Detect portal user deletion: more flexible detection
+                # Check if login changed to __deleted_user_* pattern OR user became inactive
+                is_portal_deletion = (
+                    (user.login.startswith('__deleted_user_') and
+                     old_data.get('login') and
+                     not old_data.get('login').startswith('__deleted_user_')) or
+                    (old_data.get('active') == True and user.active == False)
+                )
+
+                if is_portal_deletion:
+                    # Handle as user deletion instead of change
+                    user_deletion_data = {
+                        'id': user.id,
+                        'login': old_data.get('login', user.login),
+                        'name': old_data.get('name', user.name),
+                        'email': old_data.get('email', user.email),
+                        'partner_id': user.partner_id.id,
+                        'deletion_type': 'portal_self_deletion/archived',
+                    }
+                    self.sync_user_deletion(user_deletion_data)
+                    continue
+
                 # Get current user data
-                new_values = {
+                current_values = {
                     'id': user.id,
                     'login': user.login,
                     'name': user.name,
@@ -46,17 +82,24 @@ class UserSync(models.Model):
                     'partner_id': user.partner_id.id if user.partner_id else False,
                 }
 
-                # Prepare old values if available
-                old_data = {}
-                if old_values and user.id in old_values:
-                    old_data = old_values[user.id]
+                # Only send changed values
+                changed_values = {}
+                for key, new_val in current_values.items():
+                    old_val = old_data.get(key)
+                    if old_val != new_val:
+                        changed_values[key] = new_val
+
+                # If no changes detected, skip
+                if not changed_values:
+                    _logger.info(f"No changes detected for user {user.id}, skipping sync")
+                    continue
 
                 # Send to backend with consistent format
                 event_type = 'user_changed'
                 data = {
                     'record_id': user.id,
                     'old_data': self._make_json_serializable(old_data),
-                    'new_data': self._make_json_serializable(new_values),
+                    'new_data': self._make_json_serializable(changed_values),
                     'user_id': user.id,
                     'partner_id': user.partner_id.id,
                 }
