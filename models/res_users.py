@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-from odoo import models, fields, api
+from odoo import models, api
 import logging
 
 _logger = logging.getLogger(__name__)
@@ -66,3 +66,55 @@ class ResUsers(models.Model):
         """Override to always show 2FA as disabled"""
         for record in self:
             record.totp_enabled = False
+
+    def unlink(self):
+        """Override unlink to handle cascading deletion of partner when user is deleted"""
+        # Skip partner deletion if this deletion was triggered by partner deletion (to avoid infinite recursion)
+        if self.env.context.get('skip_partner_deletion'):
+            return super().unlink()
+
+        # Store partner information before deletion for sync
+        partner_data_list = []
+
+        for user in self:
+            # Only handle portal users
+            if not user.has_group('base.group_portal'):
+                continue
+
+            if user.partner_id:
+                partner = user.partner_id
+
+                # Check if this partner has other users (excluding the current one being deleted)
+                other_users = partner.user_ids.filtered(lambda u: u.id != user.id)
+
+                if not other_users:
+                    # Partner will be orphaned, so we should delete it too
+                    partner_data = {
+                        'id': partner.id,
+                        'name': partner.name,
+                        'email': partner.email,
+                        'user_ids': [user.id],
+                        'has_portal_user': True,
+                        'deletion_triggered_by': 'user_deletion'
+                    }
+                    partner_data_list.append((partner, partner_data))
+
+                    _logger.info(f"User {user.id} deletion will trigger partner {partner.id} deletion")
+
+        # Call the original unlink method first
+        result = super().unlink()
+
+        # After successful user deletion, delete orphaned partners and sync
+        for partner, partner_data in partner_data_list:
+            try:
+                # Sync the partner deletion to backend
+                self.env['strohm_addon.partner_sync'].sync_partner_deletion(partner_data)
+
+                # Delete the partner (this will prevent triggering user deletion again)
+                # We need to use sudo() and set a context flag to avoid infinite recursion
+                partner.with_context(skip_user_deletion=True).sudo().unlink()
+
+            except Exception as e:
+                _logger.error(f"Failed to delete orphaned partner {partner.id} after user deletion: {str(e)}")
+
+        return result

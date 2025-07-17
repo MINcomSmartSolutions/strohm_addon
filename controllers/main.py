@@ -88,6 +88,7 @@ class StrohmAPI(Controller):
         """Ensure an accounting user exists for invoice operations"""
         try:
             _logger.info("Ensuring accounting user exists for invoice operations")
+            # TODO: In every init it tries to create a new accounting user, and it look like it goes through but it doesn't
 
             # Get current company
             company = request.env.company
@@ -167,7 +168,7 @@ class StrohmAPI(Controller):
             try:
                 # Test if user can create account.move records
                 test_env = request.env['account.move'].with_user(accounting_user).sudo()
-                if not test_env.check_access('create', raise_exception=False):
+                if not test_env.check_access('create'):
                     _logger.warning("Accounting user may not have sufficient permissions for account.move creation")
                 else:
                     _logger.info("Accounting user has proper permissions for account.move creation")
@@ -382,7 +383,7 @@ class StrohmAPI(Controller):
                 return None
 
             # Test permissions
-            can_create_moves = request.env['account.move'].with_user(accounting_user).sudo().check_access_rights('create', raise_exception=False)
+            can_create_moves = request.env['account.move'].with_user(accounting_user).sudo().check_access('create')
 
             debug_info = {
                 'id': accounting_user.id,
@@ -392,7 +393,7 @@ class StrohmAPI(Controller):
                 'groups': [g.name for g in accounting_user.groups_id],
                 'can_create_account_moves': can_create_moves
             }
-            
+
             _logger.debug(f"Accounting user debug info: {debug_info}")
             return debug_info
 
