@@ -10,6 +10,7 @@
             <field name="filter_pre_domain" eval="[('groups_id', '=', ref('base.group_portal'))]"/>
             <field name="trigger_field_ids" eval="[(4, ref('base.field_res_users__login')),
                                                  (4, ref('base.field_res_users__name')),
+                                                 (4, ref('base.field_res_users__active')),
                                                  (4, ref('base.field_res_users__email')),
                                                  (4, ref('base.field_res_users__partner_id'))]"/>
         </record>
@@ -50,6 +51,7 @@
             <field name="active" eval="True"/>
             <field name="filter_pre_domain" eval="[('user_ids.groups_id', '=', ref('base.group_portal'))]"/>
             <field name="trigger_field_ids" eval="[(4, ref('base.field_res_partner__name')),
+                                                    (4, ref('base.field_res_partner__active')),
                                                  (4, ref('base.field_res_partner__email')),
                                                  (4, ref('base.field_res_partner__phone')),
                                                  (4, ref('base.field_res_partner__mobile')),

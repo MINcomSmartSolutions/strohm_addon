@@ -1,5 +1,6 @@
-from typing import List, Optional
 from datetime import datetime
+from typing import List
+
 from pydantic import BaseModel, EmailStr, Field, field_validator
 
 OUR_DATETIME_FORMAT = "%Y-%m-%dT%H:%M:%S"
@@ -7,8 +8,8 @@ OUR_DATETIME_FORMAT = "%Y-%m-%dT%H:%M:%S"
 
 class BaseRequest(BaseModel):
     """Base schema with common fields for authentication and validation"""
-    timestamp: str
-    salt: str
+    timestamp: str = Field(..., max_length=30)
+    salt: str = Field(..., max_length=30)
     hash: str
 
     @field_validator('timestamp')
@@ -35,7 +36,7 @@ class ApiKeyRotation(BaseRequest):
     """Schema for API key rotation requests"""
     user_id: int = Field(..., gt=0)
     key: str
-    key_salt: str
+    key_salt: str = Field(..., max_length=30)
 
 
 class PaymentMethodCheck(BaseRequest):
@@ -43,14 +44,15 @@ class PaymentMethodCheck(BaseRequest):
     user_id: int = Field(..., gt=0)
     partner_id: int = Field(..., gt=0)
     key: str
-    key_salt: str
+    key_salt: str = Field(..., max_length=30)
 
 
 class BillLineItem(BaseModel):
     """Schema for individual line items in a bill"""
-    sku: str
-    quantity: float = Field(..., gt=0)
-    price_unit: float = Field(..., gt=0)
+    sku: str = Field(..., min_length=3, max_length=50)
+    # Quantity and price must be non-negative TODO: should we allow 0?
+    quantity: float = Field(..., ge=0)
+    price_unit: float = Field(..., ge=0)
 
     @field_validator('sku')
     def validate_sku(cls, v, info):
@@ -64,9 +66,9 @@ class BillCreate(BaseRequest):
     """Schema for bill creation requests"""
     lines_data: List[BillLineItem]
     key: str
-    key_salt: str
-    session_start: str
-    session_end: str
+    key_salt: str = Field(..., max_length=30)
+    session_start: str = Field(..., max_length=30)
+    session_end: str = Field(..., max_length=30)
     user_id: int = Field(..., gt=0)
     partner_id: int = Field(..., gt=0)
 
@@ -100,4 +102,4 @@ class BillCreate(BaseRequest):
 class PortalLogin(BaseRequest):
     """Schema for portal auto-login requests"""
     key: str
-    key_salt: str
+    key_salt: str = Field(..., max_length=30)

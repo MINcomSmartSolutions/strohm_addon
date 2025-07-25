@@ -25,6 +25,7 @@
     'data': [
         'views/portal_templates.xml',
         'views/charging_session_invoice.xml',
+        # 'views/account_portal_templates.xml',
         'security/ir.model.access.csv',
         'data/user_automations.xml',
         'data/partner_user_integrity_cron.xml',

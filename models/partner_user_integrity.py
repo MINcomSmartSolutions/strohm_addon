@@ -68,3 +68,51 @@ class PartnerUserIntegrity(models.Model):
 
         _logger.info("Partner-user integrity check completed")
         return True
+
+class ResPartner(models.Model):
+    _inherit = 'res.partner'
+
+    def unlink(self):
+        """Override unlink to handle cascading deletion of users when partner is deleted"""
+        # Skip user deletion if this deletion was triggered by user deletion (to avoid infinite recursion)
+        if self.env.context.get('skip_user_deletion'):
+            return super().unlink()
+
+        # Store user information before deletion for sync
+        user_data_list = []
+
+        for partner in self:
+            # Only handle partners with portal users
+            portal_users = partner.user_ids.filtered(lambda u: u.has_group('base.group_portal'))
+
+            if portal_users:
+                for user in portal_users:
+                    user_data = {
+                        'id': user.id,
+                        'login': user.login,
+                        'name': user.name,
+                        'email': user.email,
+                        'partner_id': partner.id,
+                        'deletion_triggered_by': 'partner_deletion'
+                    }
+                    user_data_list.append((user, user_data))
+
+                    _logger.info(f"Partner {partner.id} deletion will trigger user {user.id} deletion")
+
+        # Call the original unlink method first
+        result = super().unlink()
+
+        # After successful partner deletion, delete associated portal users and sync
+        for user, user_data in user_data_list:
+            try:
+                # Sync the user deletion to backend
+                self.env['strohm_addon.user_sync'].sync_user_deletion(user_data)
+
+                # Delete the user (this will prevent triggering partner deletion again)
+                # We need to use sudo() and set a context flag to avoid infinite recursion
+                user.with_context(skip_partner_deletion=True).sudo().unlink()
+
+            except Exception as e:
+                _logger.error(f"Failed to delete associated user {user.id} after partner deletion: {str(e)}")
+
+        return result
