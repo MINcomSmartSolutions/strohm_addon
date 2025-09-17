@@ -642,7 +642,7 @@ class StrohmAPI(Controller):
             _logger.debug(f"🔑 User ID: {user_id}")
 
             user = request.env['res.users'].sudo().browse(user_id)
-            if not user.exists():
+            if not user or not user.exists() or not user.active:
                 return request.make_json_response({'error': 'User not found'}, status=404)
 
             # Disable 2FA for this user if it's enabled
@@ -656,7 +656,7 @@ class StrohmAPI(Controller):
             request.httprequest.environ['wsgi.interactive'] = False
 
             try:
-                # Direct session setup without using authenticate
+                # Direct session setup without using authenticate!
                 # This bypasses the _check_credentials validation that requires type='password'
                 request.session.uid = user.id
                 request.session.login = user.login
