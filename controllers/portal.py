@@ -22,8 +22,7 @@ class CustomCustomerPortal(CustomerPortal):
         values['open_deactivate_modal'] = True
         values['get_error'] = get_error
 
-        backend_port = os.environ.get('BACKEND_PORT', '3000')
-        self.BACKEND_URL = f"http://localhost:{backend_port}"
+        self.BACKEND_URL = os.environ.get('BACKEND_EXTERNAL_URL')
 
         if validation != request.env.user.login:
             values['error_message'] = _('The validation code does not match your login.')
@@ -32,7 +31,7 @@ class CustomCustomerPortal(CustomerPortal):
             request.session.logout()
 
             return werkzeug.utils.redirect(
-                self.BACKEND_URL + '/logout?message=%s' % urls.url_quote(_('Account deleted!')))
+                self.BACKEND_URL + '/logout?type=success&message=%s' % urls.url_quote(_('Account deleted!')))
 
         return request.render('portal.portal_my_security', values, headers={
             'X-Frame-Options': 'SAMEORIGIN',

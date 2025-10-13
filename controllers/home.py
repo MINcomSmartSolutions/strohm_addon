@@ -16,19 +16,24 @@ _logger = logging.getLogger(__name__)
 
 class CustomHome(Home):
     def __init__(self):
-        backend_port = os.environ.get('BACKEND_PORT', '3000')
         self.ODOO_ENV = os.environ.get('ODOO_ENV')
-        self.BACKEND_URL = f"http://localhost:{backend_port}"
+        self.BACKEND_URL = os.environ.get('BACKEND_EXTERNAL_URL')
+
+        allowed_hosts_env = os.environ.get('ALLOWED_HOSTS', '')
+        if allowed_hosts_env:
+            # Split by comma and strip whitespace
+            self.allowed_hosts = [host.strip() for host in allowed_hosts_env.split(',') if host.strip()]
+        else:
+            # If not set, allow all hosts (like Django's ['*'])
+            self.allowed_hosts = ['*']
 
         if not self.ODOO_ENV:
-            _logger.warning("ODOO_ENV not set, defaulting to 'prod'")
-            self.ODOO_ENV = 'prod'
-
+            _logger.warning("ODOO_ENV not set, defaulting to 'production'")
+            self.ODOO_ENV = 'production'
 
     def _validate_redirect(self, redirect_url):
         """Validate that redirect URL is safe"""
         allowed_schemes = ['https']
-        allowed_hosts = ['yourdomain.com', 'othertrusted.com']
 
         # Allow any redirect in debug mode for development convenience
         if self.ODOO_ENV == 'dev' or self.ODOO_ENV == 'test':
@@ -37,9 +42,13 @@ class CustomHome(Home):
         if not redirect_url:
             return False
 
+        # If allowed_hosts contains '*', allow all hosts
+        if '*' in self.allowed_hosts:
+            return True
+
         parsed = werkzeug.urls.url_parse(redirect_url)
         return (not parsed.scheme or parsed.scheme in allowed_schemes) and \
-            (not parsed.netloc or parsed.netloc in allowed_hosts)
+            (not parsed.netloc or parsed.netloc in self.allowed_hosts)
 
     @http.route('/web/admin_login', type='http', auth='none')
     def web_admin_login(self, redirect=None, **kw):
