@@ -90,10 +90,19 @@ class StrohmAPI(Controller):
             _logger.info("Ensuring accounting user exists for invoice operations")
             # TODO: In every init it tries to create a new accounting user, and it look like it goes through but it doesn't
 
-            # Get current company
+            # Get current company - ensure we have exactly one company
             company = request.env.company
-            if not company:
+            if not company or not company.id:
                 company = request.env['res.company'].sudo().search([], limit=1)
+
+            # Ensure we have a singleton company record
+            if not company or len(company) != 1:
+                _logger.error("Could not get a valid company for accounting user creation")
+                # Fallback to admin user
+                admin_user = request.env['res.users'].sudo().search([('login', '=', 'admin')], limit=1)
+                if admin_user:
+                    return admin_user.id
+                return 1  # Fallback to superuser
 
             # Create accounting user name based on company
             accounting_user_name = f"{company.name} Buchhaltung"
@@ -243,7 +252,7 @@ class StrohmAPI(Controller):
     def _decrypt_api_key(self, encoded_api_key, encoded_salt):
         """Decrypt API key using environment variable secret"""
 
-        _logger.debug("🔑 Decrypting API key")
+        _logger.debug(" Decrypting API key")
         try:
             # Decode base64 inputs once
             encrypted_key = base64.urlsafe_b64decode(encoded_api_key)
@@ -262,7 +271,7 @@ class StrohmAPI(Controller):
             f = Fernet(key)
 
             decrypted_key = f.decrypt(encrypted_key).decode()
-            _logger.debug("🔑 API key decrypted successfully")
+            _logger.debug(" API key decrypted successfully")
             return decrypted_key
         except InvalidToken:
             raise ValidationError("Invalid API or salt")
@@ -281,24 +290,24 @@ class StrohmAPI(Controller):
 
         token = auth_header.split(' ')[1]
         if not token:
-            _logger.debug("❌ No token provided in Authorization header.")
+            _logger.debug(" No token provided in Authorization header.")
             return False
 
         # Verify token using _check_credentials
         admin_id = request.env['res.users.apikeys'].sudo()._check_credentials(scope='rpc', key=token)
         if not admin_id:
-            _logger.debug("❌ Token verification failed.")
+            _logger.debug(" Token verification failed.")
             return False
 
-        _logger.debug("✅ Token verification succeeded.")
+        _logger.debug(" Token verification succeeded.")
 
         # Update request environment with the authenticated user
         admin = request.env['res.users'].sudo().browse(admin_id)
         if not admin.has_group('base.group_system'):
-            _logger.debug("❌ Admin doesn't have system access.")
+            _logger.debug(" Admin doesn't have system access.")
             return False
 
-        _logger.debug("✅ Admin has system access.")
+        _logger.debug(" Admin has system access.")
         request.update_env(user=admin)
         return True
 
@@ -582,7 +591,7 @@ class StrohmAPI(Controller):
                 'Auto-generated User API key',  # name
                 None  # TODO: Set a viable expiration_date
             )
-            _logger.info(f"🔑 Generated API key for user {user.id}: {api_key}")
+            _logger.info(f" Generated API key for user {user.id}: {api_key}")
 
             # Encrypt API key for transport, this encryption is done by us (independent of odoo framework)
             encrypted_token_data = self._encrypt_api_key(api_key)
@@ -627,7 +636,7 @@ class StrohmAPI(Controller):
 
             # Decrypt API key
             decrypted_key = self._decrypt_api_key(validated_data.key, validated_data.key_salt)
-            _logger.debug('🔑 User API key decrypted successfully')
+            _logger.debug(' User API key decrypted successfully')
 
             # Directly check the API key
             user_id = request.env['res.users.apikeys'].sudo()._check_credentials(scope='rpc', key=decrypted_key)
@@ -639,7 +648,7 @@ class StrohmAPI(Controller):
             if not (self._validate_hash(validated_data.hash, message)):
                 return request.make_json_response({'error': 'Invalid signature'}, status=403)
 
-            _logger.debug(f"🔑 User ID: {user_id}")
+            _logger.debug(f" User ID: {user_id}")
 
             user = request.env['res.users'].sudo().browse(user_id)
             if not user or not user.exists() or not user.active:
@@ -666,7 +675,7 @@ class StrohmAPI(Controller):
                 user = user.with_user(user)
                 user._update_last_login()
 
-                _logger.debug('🔑 User session set up successfully')
+                _logger.debug(' User session set up successfully')
 
                 # Skip device registration for enhanced security tracking since we're bypassing 2FA
                 if hasattr(request.env['res.users'], '_register_device'):
@@ -728,7 +737,7 @@ class StrohmAPI(Controller):
 
             # Decrypt API key and authenticate user
             decrypted_key = self._decrypt_api_key(validated_data.key, validated_data.key_salt)
-            _logger.debug('🔑 API key decrypted successfully')
+            _logger.debug(' API key decrypted successfully')
 
             # Directly check the API key
             user_id = request.env['res.users.apikeys'].sudo()._check_credentials(scope='rpc', key=decrypted_key)
