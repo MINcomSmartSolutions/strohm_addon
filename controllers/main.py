@@ -64,8 +64,8 @@ class StrohmAPI(Controller):
         # Initialize standard products during API startup
         self._ensure_standard_products()
 
-        # Initialize accounting user for invoice operations
-        self.accounting_user_id = self._ensure_accounting_user()
+        # Use admin user for invoice operations (simplified approach)
+        self.accounting_user_id = self._get_admin_user_id()
 
         self.API_SECRET = os.environ.get('ODOO_API_SECRET')
         if not self.API_SECRET:
@@ -84,139 +84,38 @@ class StrohmAPI(Controller):
         except Exception as e:
             _logger.error(f"Failed to initialize standard products: {str(e)}", exc_info=True)
 
-    def _ensure_accounting_user(self):
-        """Ensure an accounting user exists for invoice operations"""
+    def _get_admin_user_id(self):
+        """Get admin user ID for invoice operations (simplified approach)"""
         try:
-            _logger.info("Ensuring accounting user exists for invoice operations")
-            # TODO: In every init it tries to create a new accounting user, and it look like it goes through but it doesn't
+            _logger.info("Getting admin user for invoice operations")
 
-            # Get current company - ensure we have exactly one company
-            company = request.env.company
-            if not company or not company.id:
-                company = request.env['res.company'].sudo().search([], limit=1)
+            # Try to find admin user
+            admin_user = request.env['res.users'].sudo().search([('login', '=', 'admin')], limit=1)
+            if admin_user and admin_user.exists():
+                _logger.info(f"Using admin user for accounting operations: {admin_user.name} (ID: {admin_user.id})")
+                return admin_user.id
 
-            # Ensure we have a singleton company record
-            if not company or len(company) != 1:
-                _logger.error("Could not get a valid company for accounting user creation")
-                # Fallback to admin user
-                admin_user = request.env['res.users'].sudo().search([('login', '=', 'admin')], limit=1)
-                if admin_user:
-                    return admin_user.id
-                return 1  # Fallback to superuser
-
-            # Create accounting user name based on company
-            accounting_user_name = f"{company.name} Buchhaltung"
-            accounting_user_login = f"accounting_{company.id}@{company.name.lower().replace(' ', '_')}.internal"
-
-            # Check if accounting user already exists
+            # Fallback to first active user with accounting rights
             accounting_user = request.env['res.users'].sudo().search([
-                ('login', '=', accounting_user_login)
+                ('active', '=', True),
+                ('groups_id', 'in', [request.env.ref('account.group_account_user').id])
             ], limit=1)
 
-            if accounting_user:
-                _logger.info(f"Accounting user already exists: {accounting_user.name} (ID: {accounting_user.id})")
+            if accounting_user and accounting_user.exists():
+                _logger.info(f"Using accounting user: {accounting_user.name} (ID: {accounting_user.id})")
                 return accounting_user.id
 
-            # Create partner for the accounting user
-            partner_vals = {
-                'name': accounting_user_name,
-                'email': accounting_user_login,
-                'is_company': False,
-                'supplier_rank': 0,
-                'customer_rank': 0,
-                'company_id': company.id,
-                'lang': 'de_DE',
-                'tz': 'Europe/Berlin',
-            }
-
-            partner = request.env['res.partner'].sudo().create(partner_vals)
-            _logger.info(f"Created accounting partner: {partner.name} (ID: {partner.id})")
-
-            # Get required groups for accounting operations
-            account_user_group = request.env.ref('account.group_account_user')
-            account_invoice_group = request.env.ref('account.group_account_invoice')
-            base_user_group = request.env.ref('base.group_user')
-
-            # Verify groups exist
-            if not account_user_group:
-                _logger.error("account.group_account_user not found")
-                raise ValidationError("Required accounting group not found")
-            if not account_invoice_group:
-                _logger.error("account.group_account_invoice not found")
-                raise ValidationError("Required invoice group not found")
-            if not base_user_group:
-                _logger.error("base.group_user not found")
-                raise ValidationError("Required base user group not found")
-
-            # Create the accounting user
-            user_vals = {
-                'name': accounting_user_name,
-                'login': accounting_user_login,
-                'email': accounting_user_login,
-                'partner_id': partner.id,
-                'company_id': company.id,
-                'company_ids': [(6, 0, [company.id])],
-                'lang': 'de_DE',
-                'tz': 'Europe/Berlin',
-                'active': True,
-                'groups_id': [(6, 0, [
-                    base_user_group.id,
-                    account_user_group.id,
-                    account_invoice_group.id,
-                ])],
-            }
-
-            accounting_user = request.env['res.users'].sudo().with_context(
-                no_reset_password=True
-            ).create(user_vals)
-
-            _logger.info(f"Created accounting user: {accounting_user.name} (ID: {accounting_user.id})")
-            _logger.info(f"Accounting user groups: {[g.name for g in accounting_user.groups_id]}")
-
-            # Verify the user has the required permissions
-            try:
-                # Test if user can create account.move records
-                test_env = request.env['account.move'].with_user(accounting_user).sudo()
-                if not test_env.check_access('create'):
-                    _logger.warning("Accounting user may not have sufficient permissions for account.move creation")
-                else:
-                    _logger.info("Accounting user has proper permissions for account.move creation")
-            except Exception as e:
-                _logger.warning(f"Could not verify accounting user permissions: {str(e)}")
-
-            return accounting_user.id
+            # Final fallback to superuser
+            _logger.warning("No admin or accounting user found, falling back to superuser")
+            return 1
 
         except Exception as e:
-            _logger.error(f"Failed to ensure accounting user: {str(e)}", exc_info=True)
-            # Fallback to admin user if creation fails
-            admin_user = request.env['res.users'].sudo().search([('login', '=', 'admin')], limit=1)
-            if admin_user:
-                _logger.warning(f"Falling back to admin user for accounting operations: {admin_user.id}")
-                return admin_user.id
-            else:
-                # Final fallback to superuser
-                _logger.error("No admin user found, falling back to superuser (ID: 1)")
-                return 1
+            _logger.error(f"Failed to get admin user: {str(e)}", exc_info=True)
+            return 1  # Fallback to superuser
 
     def _get_accounting_user_id(self):
-        """Get accounting user ID, recreating if necessary"""
-        try:
-            # Check if current accounting user still exists
-            if hasattr(self, 'accounting_user_id') and self.accounting_user_id:
-                accounting_user = request.env['res.users'].sudo().browse(self.accounting_user_id)
-                if accounting_user.exists() and accounting_user.active:
-                    return self.accounting_user_id
-                else:
-                    _logger.warning(
-                        f"Accounting user {self.accounting_user_id} no longer exists or is inactive, recreating...")
-
-            # Recreate accounting user if it doesn't exist
-            self.accounting_user_id = self._ensure_accounting_user()
-            return self.accounting_user_id
-
-        except Exception as e:
-            _logger.error(f"Failed to get accounting user ID: {str(e)}", exc_info=True)
-            return 1  # Fallback to superuser
+        """Get accounting user ID (simplified to use admin user)"""
+        return self._get_admin_user_id()
 
     def _encrypt_api_key(self, api_key):
         """Encrypt API key using environment variable secret"""
@@ -280,9 +179,12 @@ class StrohmAPI(Controller):
             raise ValueError(f"Decryption failed: {str(e)}")
 
     def _validate_admin_token(self, headers):
-        """Validate Bearer token from Authorization header"""
+        """Validate Bearer token from Authorization header
 
-        # TODO Even tough the uri is internal and not exposed to internet, admin token can be hijacked? Better hash it.
+        Accepts either:
+        1. ODOO_API_SECRET environment variable (simpler, no GUI needed)
+        2. Valid Odoo API key (for more granular control)
+        """
 
         auth_header = headers.get('Authorization')
         if not auth_header or not auth_header.startswith('Bearer '):
@@ -293,7 +195,29 @@ class StrohmAPI(Controller):
             _logger.debug(" No token provided in Authorization header.")
             return False
 
-        # Verify token using _check_credentials
+        # First, check if token matches ODOO_API_SECRET (constant-time comparison)
+        if secrets.compare_digest(token, self.API_SECRET):
+            _logger.debug(" Admin authenticated with ODOO_API_SECRET")
+            # Use admin user for this request
+            admin_user = request.env['res.users'].sudo().search([
+                ('login', '=', 'admin'),
+                ('active', '=', True)
+            ], limit=1)
+
+            if not admin_user or not admin_user.exists():
+                _logger.error(" Admin user not found or inactive - rejecting authentication")
+                return False
+
+            # Verify admin has system access (same security level as API key auth)
+            if not admin_user.has_group('base.group_system'):
+                _logger.error(" Admin user lacks system access - rejecting authentication")
+                return False
+
+            _logger.debug(" Admin has system access - authentication successful")
+            request.update_env(user=admin_user)
+            return True
+
+        # If not API_SECRET, try validating as Odoo API key
         admin_id = request.env['res.users.apikeys'].sudo()._check_credentials(scope='rpc', key=token)
         if not admin_id:
             _logger.debug(" Token verification failed.")
@@ -304,7 +228,7 @@ class StrohmAPI(Controller):
         # Update request environment with the authenticated user
         admin = request.env['res.users'].sudo().browse(admin_id)
         if not admin.has_group('base.group_system'):
-            _logger.debug(" Admin doesn't have system access.")
+            _logger.debug(" Admin doesn't have system access - authentication successful")
             return False
 
         _logger.debug(" Admin has system access.")
@@ -686,7 +610,6 @@ class StrohmAPI(Controller):
 
                 # Get the redirect path (default to portal home page)
                 redirect_path = kw.get('redirect', '/my')
-
 
                 # Redirect user directly to the portal page
                 return werkzeug.utils.redirect(redirect_path)
