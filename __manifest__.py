@@ -31,6 +31,7 @@
         'data/user_automations.xml',
         'data/partner_user_integrity_cron.xml',
         'data/uom_data.xml',
+        'data/mail_templates.xml',
     ],
     'external_dependencies': {
         'python': [
