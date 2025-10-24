@@ -4,7 +4,7 @@
         <record id="email_template_charging_invoice" model="mail.template">
             <field name="name">Charging Invoice - Send by Email</field>
             <field name="model_id" ref="account.model_account_move"/>
-            <field name="subject">Rechnung für Ladevorgang am {{ format_date(object.invoice_date, date_format='dd.MM.yyyy') }}</field>
+            <field name="subject">Information zu Ihrem Ladevorgang am {{ format_date(object.invoice_date, date_format='dd.MM.yyyy') }}</field>
             <field name="email_from">{{ (object.invoice_user_id.email_formatted or user.email_formatted) }}</field>
             <field name="email_to">{{ object.partner_id.email }}</field>
             <field name="lang">{{ object.partner_id.lang }}</field>
@@ -19,11 +19,11 @@
                         <tr>
                             <td align="center">
                                 <table border="0" cellpadding="0" cellspacing="0"
-                                       style="max-width: 600px; width: 100%; background-color: #ffffff; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+                                       style="max-width: 600px; width: 100%; background-color: #ffffff; overflow: hidden; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
                                     <!-- Header -->
                                     <tr>
-                                        <td style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 30px; text-align: center;">
-                                            <h1 style="color: #ffffff; margin: 0; font-size: 28px;">
+                                        <td style="background-color: #fb5454 ; padding: 30px; text-align: center;">
+                                            <h1 style="color: #ffffff; margin: 0; font-size: 26px;">
                                                 Information zu Ihrem Ladevorgang
                                             </h1>
                                         </td>
@@ -35,20 +35,20 @@
                                             <p style="margin: 0 0 15px; font-size: 16px;">Sehr geehrte*r Kund*in,</p>
 
                                             <p style="margin: 0 0 15px;">
-                                                vielen Dank für das Laden Ihres Fahrzeugs an der Hochschule München. Der
+                                                vielen Dank für das Laden Ihres Fahrzeugs an der <b>Hochschule München</b>. Der
                                                 nachfolgende Ladevorgang wurde erfolgreich abgeschlossen. Im Zeitraum
-                                                bis einschließlich 31. Dezember 2025 fallen für Sie keine Kosten an.
+                                                bis einschließlich <b>31. Dezember 2025</b> fallen für Sie <b>keine Kosten</b> an.
                                             </p>
                                             <p style="margin: 0 0 15px;">
-                                                Ab dem 1. Januar 2026 werden Ladevorgänge verbindlich zu den auf dem
-                                                Nutzerportal veröffentlichten Tarifen abgerechnet. Bitte berücksichtigen
+                                                <b>Ab dem 1. Januar 2026 </b>werden Ladevorgänge <b>verbindlich zu den auf dem
+                                                Nutzerportal veröffentlichten Tarifen</b> abgerechnet. Bitte berücksichtigen
                                                 Sie dies für Ihre zukünftigen Ladevorgänge. Die jeweils gültigen Preise
                                                 können Sie jederzeit online einsehen.
                                             </p>
 
                                             <!-- Charging Session Details -->
                                             <div
-                                                style="background-color: #f0f7ff; border-left: 4px solid #667eea; padding: 15px; margin: 20px 0; border-radius: 4px;">
+                                                style="background-color: #f0f7ff; border-left: 4px solid #667eea; padding: 15px; margin: 20px 0;">
                                                 <h3 style="margin: 0 0 10px; color: #667eea; font-size: 18px;">
                                                     Details zum Ladevorgang
                                                 </h3>
@@ -91,7 +91,7 @@
 
                                             <!-- Invoice Summary -->
                                             <div
-                                                style="background-color: #fff9e6; border-left: 4px solid #ffa500; padding: 15px; margin: 20px 0; border-radius: 4px;">
+                                                style="background-color: #fff9e6; border-left: 4px solid #ffa500; padding: 15px; margin: 20px 0;">
                                                 <h3 style="margin: 0 0 10px; color: #ffa500; font-size: 18px;">
                                                     Rechnungsinformationen
                                                 </h3>
@@ -138,7 +138,7 @@
                                             </p>
 
                                             <p style="margin: 20px 0 0; font-size: 13px; color: #666;">
-                                                Bei Fragen zu dieser Rechnung können Sie uns jederzeit kontaktieren.
+                                                Sollten Sie Fragen zum Ladeservice haben, stehen wir Ihnen gerne zur Verfügung.
                                             </p>
                                         </td>
                                     </tr>
