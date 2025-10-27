@@ -471,9 +471,73 @@ class StrohmAPI(Controller):
 
             # Check if partner with this email already exists
             existing_partner = request.env['res.partner'].sudo().search([('email', '=', validated_data.email)], limit=1)
-            if existing_partner:
+
+            # Check if user with this email/login already exists
+            existing_user = request.env['res.users'].sudo().search([('login', '=', validated_data.email)], limit=1)
+
+            # If both partner and user exist, verify they match
+            if existing_partner and existing_user:
+                # Verify the user and partner are associated
+                if existing_user.partner_id.id != existing_partner.id:
+                    return request.make_json_response(
+                        {'error': f'Data inconsistency: user and partner with email {validated_data.email} are not properly linked'},
+                        status=500
+                    )
+
+                # If email and name match, regenerate and return new API credentials
+                if existing_partner.name == validated_data.name:
+                    _logger.info(f"Existing user {existing_user.id} re-registering, regenerating API key")
+
+                    # Revoke old API keys by setting expiration date to now
+                    request.env['res.users.apikeys'].sudo().search([('user_id', '=', existing_user.id)]).write(
+                        {'expiration_date': fields.Datetime.now()}
+                    )
+
+                    # Generate new API key
+                    new_api_key = request.env['res.users.apikeys'].sudo()._generate_for_user(
+                        existing_user.id,
+                        'rpc',  # scope
+                        'Auto-generated User API key',  # name
+                        None  # TODO: Set a viable expiration_date
+                    )
+                    _logger.info(f"Regenerated API key for existing user {existing_user.id}")
+
+                    # Encrypt API key for transport
+                    encrypted_token_data = self._encrypt_api_key(new_api_key)
+                    _datetime = datetime.now().strftime(self.datetime_format)
+                    _salt = self._generate_salt(decode=True)
+                    _hash = self._generate_hash(
+                        f"{_datetime}{existing_user.id}{existing_partner.id}{encrypted_token_data['key']}{encrypted_token_data['key_salt']}{_salt}",
+                    )
+
+                    return request.make_json_response({
+                        'timestamp': _datetime,
+                        'user_id': existing_user.id,
+                        'partner_id': existing_partner.id,
+                        'key': encrypted_token_data['key'],
+                        'key_salt': encrypted_token_data['key_salt'],
+                        'salt': _salt,
+                        'hash': _hash,
+                    }, status=200)
+                else:
+                    # Email matches but name doesn't - this is a conflict
+                    return request.make_json_response(
+                        {'error': f'A user with email {validated_data.email} already exists with a different name'},
+                        status=409
+                    )
+
+            # If only partner exists (without user), that's a conflict
+            elif existing_partner:
                 return request.make_json_response(
-                    {'error': f'A partner with email {validated_data.email} already exists'}, status=409
+                    {'error': f'A partner with email {validated_data.email} already exists'},
+                    status=409
+                )
+
+            # If only user exists (without partner), that's also a conflict
+            elif existing_user:
+                return request.make_json_response(
+                    {'error': f'A user with email {validated_data.email} already exists'},
+                    status=409
                 )
 
             # Create partner
@@ -491,20 +555,15 @@ class StrohmAPI(Controller):
 
             portal_group = request.env.ref('base.group_portal')
             user_values = {
-                'name': data.get('name'),
-                'login': data.get('email'),
-                'email': data.get('email'),
+                'name': validated_data.name,
+                'login': validated_data.email,
+                'email': validated_data.email,
                 'partner_id': partner.id,
                 'lang': 'de_DE',
                 'active': True,
                 'groups_id': [(6, 0, [portal_group.id])],
             }
 
-            # Check if user with this login/email already exists
-            existing_user = request.env['res.users'].sudo().search([('login', '=', data.get('email'))], limit=1)
-            if existing_user:
-                return request.make_json_response({'error': f'A user with email {data.get("email")} already exists'},
-                                                  status=409)
 
             user = request.env['res.users'].sudo().with_context(no_reset_password=True).create(user_values)
 
