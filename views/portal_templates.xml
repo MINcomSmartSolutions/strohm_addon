@@ -1,7 +1,18 @@
 <?xml version="1.0" encoding="utf-8"?>
 <odoo>
+    <!-- Set default title for all portal pages -->
+    <template id="custom_portal_layout_title" inherit_id="portal.portal_layout" name="Custom Portal Layout Title">
+        <xpath expr="//t[@t-call='portal.frontend_layout']" position="inside">
+            <t t-set="title" t-value="title or 'Portal - HM Laden'"/>
+            <t t-set="x_icon">https://mediapool.hm.edu/media/_technik/img/_technik_1/favicon.jpg</t>
+        </xpath>
+    </template>
+
     <!-- Override portal_my_security template to remove password change section -->
     <template id="custom_sec" inherit_id="portal.portal_my_security" name="Custom Portal Security Fields" active='true'>
+        <xpath expr="//t[@t-call='portal.portal_layout']" position="inside">
+            <t t-set="title">Security - HM Laden</t>
+        </xpath>
         <!-- Remove password change section -->
         <xpath expr="//section[@name='portal_change_password']" position="replace">
             <!-- This removes the password change section -->
@@ -44,6 +55,14 @@
         </xpath>
         <xpath expr="//section[h4/a[@href='https://www.odoo.com/documentation/master/applications/general/auth/2fa.html']]" position="replace">
             <!-- Remove entire TOTP section by targeting the documentation link which doesn't change with localization -->
+        </xpath>
+    </template>
+
+    <!-- Override payment methods page title and favicon -->
+    <template id="custom_payment_methods_title" inherit_id="payment.payment_methods" name="Custom Payment Methods Title">
+        <xpath expr="//t[@t-call='portal.frontend_layout']" position="inside">
+            <t t-set="title">Zahlungsmethoden</t>
+            <t t-set="x_icon">https://mediapool.hm.edu/media/_technik/img/_technik_1/favicon.jpg</t>
         </xpath>
     </template>
 </odoo>
