@@ -8,30 +8,38 @@ def strohm_init_parameters(env):
     Shared initialization logic for config parameters and system setup.
     Can be called from both init hooks and controllers to ensure consistent configuration.
 
+    This function works in all contexts (init hooks and controllers) by calling sudo()
+    on individual model instances rather than on the environment itself, which avoids
+    the "Expected singleton: res.users()" error.
+
     Args:
         env: Odoo environment object
     """
+    # Note: We don't call env.sudo() here because:
+    # 1. In controller contexts, env doesn't have sudo() method
+    # 2. We call sudo() on each model instance instead, which works everywhere
+
     # Set default language and timezone context
     env.context = dict(env.context, lang='de_DE')
     env.context = dict(env.context, tz='Europe/Berlin')
 
     # Disable default digest emails
     try:
-        env['ir.config_parameter'].set_param('digest.default_digest_emails', 'False')
+        env['ir.config_parameter'].sudo().set_param('digest.default_digest_emails', 'False')
         _logger.info("Disabled digest.default_digest_emails")
     except Exception as e:
         _logger.warning("Failed to disable digest.default_digest_emails: %s", e)
 
     # Disable default digest ID
     try:
-        env['ir.config_parameter'].set_param('digest.default_digest_id', '0')
+        env['ir.config_parameter'].sudo().set_param('digest.default_digest_id', '0')
         _logger.info("Disabled digest.default_digest_id")
     except Exception as e:
         _logger.warning("Failed to disable digest.default_digest_id: %s", e)
 
     # Deactivate any existing digests
     try:
-        digests = env['digest.digest'].search([])
+        digests = env['digest.digest'].sudo().search([])
         if digests:
             digests.write({'state': 'deactivated'})
             _logger.info(f"Deactivated {len(digests)} digest records")
@@ -45,9 +53,9 @@ def strohm_init_parameters(env):
     except Exception as e:
         _logger.warning("Failed to disable portal API key generation: %s", e)
 
-
+    # Set report.url to http://localhost:8069
     try:
-        env['ir.config_parameter'].set_param('report.url', 'http://localhost:8069')
+        env['ir.config_parameter'].sudo().set_param('report.url', 'http://localhost:8069')
         _logger.info("Set report.url to http://localhost:8069")
     except Exception as e:
         _logger.warning("Failed to set report.url: %s", e)
@@ -58,7 +66,7 @@ def strohm_init_parameters(env):
         if not lang:
             _logger.warning("German language (de_DE) not found, please install it")
         elif not lang.active:
-            lang.sudo().write({'active': True})
+            lang.write({'active': True})
             _logger.info("German language (de_DE) activated")
         else:
             _logger.info("German language (de_DE) is already active")
@@ -67,19 +75,24 @@ def strohm_init_parameters(env):
 
     # Check current company and its fiscal country
     try:
-        company = env.company
+        # Try to get company from env.company, fallback to search
+        company = None
+        if hasattr(env, 'company'):
+            company = env.company
         if not company:
             company = env['res.company'].sudo().search([], limit=1)
 
         if company:
             _logger.info(f"Using company: {company.name} (id: {company.id})")
-            if company.country_id.code != 'DE':
+            if company.country_id and company.country_id.code != 'DE':
                 _logger.warning(
                     f"Company {company.name} does not have Germany set as fiscal country. "
                     f"Current: {company.country_id.name or 'Not set'}"
                 )
-            else:
+            elif company.country_id:
                 _logger.info(f"Company {company.name} has correct fiscal country: {company.country_id.name}")
+            else:
+                _logger.warning(f"Company {company.name} has no fiscal country set")
         else:
             _logger.warning("No company found in environment")
     except Exception as e:
