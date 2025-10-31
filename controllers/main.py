@@ -22,6 +22,7 @@ from ..schemas.validation import (
     UserCreate, ApiKeyRotation, PaymentMethodCheck,
     BillCreate, PortalLogin
 )
+from ..utils import strohm_init_parameters, ensure_standard_products
 
 # import debugpy
 
@@ -40,29 +41,14 @@ class StrohmAPI(Controller):
         if os.environ.get('ODOO_ENV') == 'dev':
             _logger.setLevel(logging.DEBUG)
 
-        # Check current company and its fiscal country
-        company = request.env.company
-        if not company:
-            company = request.env['res.company'].sudo().search([], limit=1)
-        _logger.info(f"Using company: {company.name} (id: {company.id})")
-        if company.country_id.code != 'DE':
-            _logger.warning(
-                f"Company {company.name} does not have Germany set as fiscal country. Current: {company.country_id.name or 'Not set'}")
-        else:
-            _logger.info(f"Company {company.name} has correct fiscal country: {company.country_id.name}")
-
-        # Check if de_DE is enabled
-        lang = request.env['res.lang'].sudo().search([('code', '=', 'de_DE')], limit=1)
-        if not lang:
-            # If language doesn't exist in the database, install it
-            _logger.warning("German language (de_DE) not found, please install it")
-        elif not lang.active:
-            # If language exists but is not active, activate it
-            lang.sudo().write({'active': True})
-            _logger.debug("German language (de_DE) activated")
+        # Run shared initialization logic to ensure consistent configuration
+        try:
+            strohm_init_parameters(request.env)
+        except Exception as e:
+            _logger.warning(f"Failed to run strohm_init_parameters in controller: {str(e)}")
 
         # Initialize standard products during API startup
-        self._ensure_standard_products()
+        self.standard_products = ensure_standard_products(request.env)
 
         # Use admin user for invoice operations (simplified approach)
         self.accounting_user_id = self._get_admin_user_id()
@@ -71,18 +57,6 @@ class StrohmAPI(Controller):
         if not self.API_SECRET:
             _logger.error("API secret not found in environment variables. Please set ODOO_API_SECRET")
             raise ValueError("API secret not found in environment variables. Please set ODOO_API_SECRET")
-
-    def _ensure_standard_products(self):
-        """Pre-create standard products used by the charging system"""
-        try:
-            _logger.info("Ensuring standard charging products exist")
-
-            # Use the ChargingSessionInvoice model to ensure products exist
-            charging_model = request.env['charging.session.invoice'].sudo()
-            self.standard_products = charging_model.ensure_standard_products()
-
-        except Exception as e:
-            _logger.error(f"Failed to initialize standard products: {str(e)}", exc_info=True)
 
     def _get_admin_user_id(self):
         """Get admin user ID for invoice operations (simplified approach)"""
