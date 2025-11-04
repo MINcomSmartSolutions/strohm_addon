@@ -7,6 +7,10 @@
             <t t-set="x_icon">https://mediapool.hm.edu/media/_technik/img/_technik_1/favicon.jpg</t>
         </xpath>
     </template>
+    <!-- Disable sale orders/quotations from portal home page using data record -->
+    <record id="sale.portal_my_home_sale" model="ir.ui.view">
+        <field name="active" eval="False"/>
+    </record>
 
     <!-- Override portal_my_security template to remove password change section -->
     <template id="custom_sec" inherit_id="portal.portal_my_security" name="Custom Portal Security Fields" active='true'>
@@ -37,14 +41,6 @@
 
         <!-- Modify confirmation numbering -->
         <xpath expr="//section[@name='portal_deactivate_account']//form//p[1]" position="replace">
-        </xpath>
-    </template>
-
-    <template id="portal_payment_method_alert" inherit_id="portal.portal_my_home" name="Payment Method Alert">
-        <xpath expr="//div[hasclass('o_portal_my_home')]" position="before">
-                <t t-if="not has_active_payment">
-                    <p class="alert alert-warning">There are currently no active payment methods for your account.</p>
-                </t>
         </xpath>
     </template>
 
