@@ -8,38 +8,51 @@
                 <!-- Charging Session Information -->
                 <div class="row mb-4" t-if="o.session_start or o.session_end">
                     <div class="col-12">
-                        <div class="alert alert-info">
-                            <h5>Ladesitzungsdetails</h5>
+                        <div class="alert alert-info"
+                             style="background-color: rgb(243, 243, 243); border-radius: 0; border: 1px solid black;">
                             <div class="row">
-                                <div class="col-4" t-if="o.session_start">
+                                <div class="col-6">
+                                    <h5 style="font-size: 2rem; line-height: 2.4rem; letter-spacing: -0.44px; margin-bottom: 1rem; margin-top: 0; font-weight: 400;">
+                                        Ladesitzungsdetails</h5>
+                                </div>
+                            </div>
+                            <div class="row" style="margin-bottom: 1rem;">
+                                <div class="col-3" t-if="o.session_start">
                                     <strong>Beginn der Ladesitzung</strong><br/>
-                                    <span t-esc="o.session_start" t-options="{'widget': 'datetime', 'tz_name': 'Europe/Berlin', 'format': 'dd.MM.yyyy HH:mm:ss'}"/>
+                                    <span t-esc="o.session_start"
+                                          t-options="{'widget': 'datetime', 'tz_name': 'Europe/Berlin', 'format': 'dd.MM.yyyy HH:mm:ss'}"/>
                                 </div>
-                                <div class="col-4" t-if="o.session_end">
+                                <div class="col-3" t-if="o.session_end">
                                     <strong>Ende der Ladesitzung</strong><br/>
-                                    <span t-esc="o.session_end" t-options="{'widget': 'datetime', 'tz_name': 'Europe/Berlin', 'format': 'dd.MM.yyyy HH:mm:ss'}"/>
+                                    <span t-esc="o.session_end"
+                                          t-options="{'widget': 'datetime', 'tz_name': 'Europe/Berlin', 'format': 'dd.MM.yyyy HH:mm:ss'}"/>
                                 </div>
-                                <div class="col-4" t-if="o.session_start and o.session_end">
+                            </div>
+                            <div class="row">
+                                <t t-set="total_kwh"
+                                   t-value="sum(line.quantity for line in o.invoice_line_ids.filtered(lambda l: l.product_uom_id and l.product_uom_id.name == 'kWh'))"/>
+                                <t t-set="has_duration" t-value="o.session_start and o.session_end"/>
+                                <t t-if="has_duration" t-set="duration" t-value="o.session_end - o.session_start"/>
+                                <t t-if="has_duration" t-set="duration_hours"
+                                   t-value="duration.total_seconds() / 3600"/>
+                                <div class="col-3">
+                                    <strong>Geladene Energie</strong><br/>
+                                    <span t-if="total_kwh > 0" class="text" style="font-size: 1.1em;"
+                                          t-esc="'%.2f kWh' % total_kwh"/>
+                                    <span t-if="total_kwh == 0" class="text-muted">N/A</span>
+                                </div>
+                                <div class="col-3" t-if="has_duration">
                                     <strong>Ladedauer</strong><br/>
-                                    <t t-set="duration" t-value="(o.session_end - o.session_start)"/>
                                     <t t-set="hours" t-value="int(duration.total_seconds() // 3600)"/>
                                     <t t-set="minutes" t-value="int((duration.total_seconds() % 3600) // 60)"/>
                                     <t t-set="seconds" t-value="int(duration.total_seconds() % 60)"/>
-                                    <span class="text-success" style="font-size: 1.1em;" t-esc="'%d Std. %d Min. %d Sek.' % (hours, minutes, seconds)"/>
+                                    <span class="text" style="font-size: 1.1em;"
+                                          t-esc="'%d Std. %d Min. %d Sek.' % (hours, minutes, seconds)"/>
                                 </div>
-                            </div>
-                            <div style="height: 8px;"></div>
-                            <div class="row">
-                                <div class="col-4">
-                                    <strong>Geladene Energie</strong><br/>
-                                    <t t-set="total_kwh" t-value="sum(line.quantity for line in o.invoice_line_ids.filtered(lambda l: l.product_uom_id and l.product_uom_id.name == 'kWh'))"/>
-                                    <span t-if="total_kwh > 0" class="text-success" style="font-size: 1.1em;" t-esc="'%.2f kWh' % total_kwh"/>
-                                    <span t-if="total_kwh == 0" class="text-muted">N/A</span>
-                                </div>
-                                <div class="col-4" t-if="total_kwh > 0">
+                                <div class="col-6" t-if="total_kwh > 0 and has_duration and duration_hours > 0">
                                     <strong>Durchschnittliche Leistung</strong><br/>
-                                    <t t-set="duration_hours" t-value="duration.total_seconds() / 3600"/>
-                                    <span t-if="duration_hours > 0" class="text-primary" style="font-size: 1.1em;" t-esc="'%.2f kW' % (total_kwh / duration_hours)"/>
+                                    <span class="text" style="font-size: 1.1em;"
+                                          t-esc="'%.2f kW' % (total_kwh / duration_hours)"/>
                                 </div>
                             </div>
                         </div>
@@ -50,7 +63,8 @@
             <!-- Remove product reference (default_code) from invoice line names -->
             <xpath expr="//td[@name='account_invoice_line_name']//span[@t-field='line.name']" position="replace">
                 <span t-if="line.name">
-                    <t t-set="clean_name" t-value="line.name.split(']')[-1].strip() if ']' in line.name else line.name"/>
+                    <t t-set="clean_name"
+                       t-value="line.name.split(']')[-1].strip() if ']' in line.name else line.name"/>
                     <span t-esc="clean_name"/>
                 </span>
             </xpath>
