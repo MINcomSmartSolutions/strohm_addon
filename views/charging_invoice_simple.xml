@@ -9,7 +9,7 @@
                 <div class="row mb-4" t-if="o.session_start or o.session_end">
                     <div class="col-12">
                         <div class="alert alert-info">
-                            <h5><i class="fa fa-bolt text-primary"/> Ladesitzungsdetails</h5>
+                            <h5>Ladesitzungsdetails</h5>
                             <div class="row">
                                 <div class="col-4" t-if="o.session_start">
                                     <strong>Beginn der Ladesitzung</strong><br/>
@@ -46,7 +46,7 @@
                     </div>
                 </div>
             </xpath>
-            
+
             <!-- Remove product reference (default_code) from invoice line names -->
             <xpath expr="//td[@name='account_invoice_line_name']//span[@t-field='line.name']" position="replace">
                 <span t-if="line.name">
