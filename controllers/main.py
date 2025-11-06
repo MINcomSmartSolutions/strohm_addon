@@ -36,7 +36,6 @@ class StrohmAPI(Controller):
         self.datetime_format = "%Y-%m-%dT%H:%M:%S"
 
         # debugpy.wait_for_client()
-        # debugpy.breakpoint()
 
         if os.environ.get('ODOO_ENV') == 'dev':
             _logger.setLevel(logging.DEBUG)
@@ -726,7 +725,9 @@ class StrohmAPI(Controller):
                 session_start,
                 session_end,
                 Partner,
-                validated_data.lines_data
+                validated_data.lines_data,
+                validated_data.parsed_due_date(),
+                validated_data.parsed_invoice_date()
             )
 
             return request.make_json_response({

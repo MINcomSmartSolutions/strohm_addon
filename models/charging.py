@@ -12,7 +12,7 @@ class ChargingSessionInvoice(models.TransientModel):
     _description = 'Charging Invoice Related to Ladeabrechnung'
 
     @api.model
-    def generate(self, session_start, session_end, partner, lines_data):
+    def generate(self, session_start, session_end, partner, lines_data, invoice_due_date=None, invoice_date=None):
         """
         Generate an invoice for a charging session.
 
@@ -27,8 +27,8 @@ class ChargingSessionInvoice(models.TransientModel):
                 - base_price (float): Standard list price for product (e.g., 0.35).
                 - custom_rate (float): Actual invoice price (e.g., 0.38).
                 - quantity (float): Consumed quantity (e.g., 150, in kWh).
-                // TODO: Add more fields if needed. e.g. payment terms, bill_date etc.
-
+            due_date (Datetime): Optional due date for the invoice. Default one month from today.
+            invoice_due_date (Datetime): Optional invoice due date. Default today.
         Returns:
             recordset: The created `account.move` record.
         """
@@ -43,7 +43,6 @@ class ChargingSessionInvoice(models.TransientModel):
             # Find product (but don't create or modify it)
             product = self.sudo()._get_or_create_product(data)
 
-
             # Build the invoice line vals - use direct attribute access instead of .get()
             qty = data.quantity
             price_unit = data.price_unit
@@ -57,7 +56,11 @@ class ChargingSessionInvoice(models.TransientModel):
         # Create the draft customer invoice
         move_vals = {
             'move_type': 'out_invoice',  # customer invoice
-            'invoice_date': fields.Date.today(),
+            'invoice_date': invoice_date.strftime(
+                DEFAULT_SERVER_DATETIME_FORMAT) if invoice_date else fields.Date.today(),
+            'invoice_date_due': invoice_due_date.strftime(
+                DEFAULT_SERVER_DATETIME_FORMAT) if invoice_due_date else fields.Date.add(
+                fields.Date.today(), months=1),
             'partner_id': Partner.id,
             'invoice_line_ids': invoice_lines,
             'session_start': session_start.strftime(DEFAULT_SERVER_DATETIME_FORMAT),
@@ -69,8 +72,6 @@ class ChargingSessionInvoice(models.TransientModel):
         # TODO: post immediately
 
         # invoice.action_post()
-
-        #TODO: charge the user with their default payment method???
 
         return invoice
 
@@ -122,7 +123,7 @@ class ChargingSessionInvoice(models.TransientModel):
                     self.env.cr.commit()  # Commit UOM creation
 
                 # Create product
-                _logger.info(f"Creating product with SKU: {sku}, name: {data.get('name', sku) }")
+                _logger.info(f"Creating product with SKU: {sku}, name: {data.get('name', sku)}")
 
                 # Fix: Proper way to get the German country
                 country = self.env.ref('base.de', raise_if_not_found=False)
@@ -180,7 +181,6 @@ class ChargingSessionInvoice(models.TransientModel):
             products[sku] = product
 
         return products
-
 
     def _get_or_create_product(self, data):
         """
