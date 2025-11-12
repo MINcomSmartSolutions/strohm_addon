@@ -1,5 +1,5 @@
-from datetime import datetime
-from typing import List
+from datetime import datetime, timedelta
+from typing import List, Optional
 
 from pydantic import BaseModel, EmailStr, Field, field_validator
 
@@ -71,6 +71,9 @@ class BillCreate(BaseRequest):
     session_end: str = Field(..., max_length=30)
     user_id: int = Field(..., gt=0)
     partner_id: int = Field(..., gt=0)
+    due_date: Optional[str] = Field(None, max_length=30)
+    invoice_date: Optional[str] = Field(None, max_length=30)
+
 
     @field_validator('session_start', 'session_end')
     def validate_session_timestamps(cls, v, info):
@@ -90,6 +93,26 @@ class BillCreate(BaseRequest):
                 raise ValueError("Session end must be after session start")
         return v
 
+    @field_validator('due_date')
+    def validate_due_date_format(cls, v, info):
+        if v is None:
+            return v
+        try:
+            datetime.strptime(v, OUR_DATETIME_FORMAT)
+            return v
+        except ValueError:
+            raise ValueError("Invalid due_date format, must be " + OUR_DATETIME_FORMAT)
+
+    @field_validator('invoice_date')
+    def validate_invoice_date_format(cls, v, info):
+        if v is None:
+            return v
+        try:
+            datetime.strptime(v, OUR_DATETIME_FORMAT)
+            return v
+        except ValueError:
+            raise ValueError("Invalid invoice_date format, must be " + OUR_DATETIME_FORMAT)
+
     def parsed_session_start(self) -> datetime:
         """Return session_start as datetime object"""
         return datetime.strptime(self.session_start, OUR_DATETIME_FORMAT)
@@ -98,6 +121,17 @@ class BillCreate(BaseRequest):
         """Return session_end as datetime object"""
         return datetime.strptime(self.session_end, OUR_DATETIME_FORMAT)
 
+    def parsed_due_date(self) -> Optional[datetime]:
+        """Return due_date as datetime object"""
+        if not self.due_date:
+            return None
+        return datetime.strptime(self.due_date, OUR_DATETIME_FORMAT)
+
+    def parsed_invoice_date(self) -> Optional[datetime]:
+        """Return invoice_date as datetime object"""
+        if not self.invoice_date:
+            return None
+        return datetime.strptime(self.invoice_date, OUR_DATETIME_FORMAT)
 
 class PortalLogin(BaseRequest):
     """Schema for portal auto-login requests"""
