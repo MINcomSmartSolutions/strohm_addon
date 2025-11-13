@@ -2,46 +2,60 @@
 <odoo>
     <data noupdate="1">
         <record id="email_template_charging_invoice" model="mail.template">
-            <field name="name">Charging Invoice - Send by Email</field>
+            <field name="name">Kostenlos Lade Rechnung Email</field>
             <field name="model_id" ref="account.model_account_move"/>
-            <field name="subject">Information zu Ihrem Ladevorgang am {{ format_date(object.invoice_date, date_format='dd.MM.yyyy') }}</field>
-            <field name="email_from">{{ (object.invoice_user_id.email_formatted or user.email_formatted) }}</field>
+            <field name="subject">Information zu Ihrem Ladevorgang am {{ format_date(object.session_start if hasattr(object,'session_start') and object.session_start else object.invoice_date,date_format='dd.MM.yyyy') }}</field>
+            <field name="email_from">{{ object.company_id.name }} &lt;no-reply@hm.edu&gt;</field>
             <field name="email_to">{{ object.partner_id.email }}</field>
+            <field name="reply_to">{{ object.company_id.name }} &lt;abrechnung.laden@hm.edu&gt;</field>
             <field name="lang">{{ object.partner_id.lang }}</field>
+            <field name="description">Used to send emails regarding charging session invoices to customers. Should beonly used till 01.01.26</field>
+            <!--            <field name="use_default_to" eval="False"/>-->
             <field name="auto_delete" eval="False"/>
-<!--            FIXME: Need reply to-->
             <field name="report_template_ids" eval="[(4, ref('account.account_invoices'))]"/>
             <field name="body_html" type="html">
                 <div
-                    style="margin: 0px; padding: 0px; font-family: 'Lucida Grande', 'Verdana', 'Arial', sans-serif; font-size: 14px; color: #333;">
+                    style="margin: 0; padding: 0; font-family: 'Segoe UI','Roboto',''Lucida Grande', 'Verdana', 'Arial', sans-serif; font-size: 14px; color: #333;">
                     <table border="0" cellpadding="0" cellspacing="0"
                            style="width: 100%; background-color: #f9f9f9; padding: 20px;">
                         <tr>
                             <td align="center">
                                 <table border="0" cellpadding="0" cellspacing="0"
-                                       style="max-width: 600px; width: 100%; background-color: #ffffff; overflow: hidden; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+                                       style="max-width: 600px; width: 100%; background-color: white; overflow: hidden;color: #161616; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
                                     <!-- Header -->
                                     <tr>
-                                        <td style="background-color: #fb5454 ; padding: 30px; text-align: center;">
-                                            <h1 style="color: #ffffff; margin: 0; font-size: 26px;">
-                                                Information zu Ihrem Ladevorgang
-                                            </h1>
+                                        <td style="padding: 30px;">
+                                            <table border="0" cellpadding="0" cellspacing="0" style="width: 100%;">
+                                                <tr>
+                                                    <td style="width: 100px; vertical-align: middle;">
+                                                        <t t-if="object.company_id.logo">
+                                                            <img t-att-src="image_data_uri(object.company_id.logo)"
+                                                                 style="max-width: 100px; height: auto;" alt="Logo"/>
+                                                        </t>
+                                                    </td>
+                                                </tr>
+                                            </table>
                                         </td>
                                     </tr>
 
                                     <!-- Body -->
                                     <tr>
                                         <td style="padding: 30px;">
-                                            <p style="margin: 0 0 15px; font-size: 16px;">Sehr geehrte*r Kund*in,</p>
+                                            <p style="margin: 0 0 15px; font-size: 16px;">Sehr geehrte*r <t
+                                                t-out="object.partner_id.name or 'Kund*in'"/>,</p>
 
                                             <p style="margin: 0 0 15px;">
-                                                vielen Dank für das Laden Ihres Fahrzeugs an der <b>Hochschule München</b>. Der
+                                                vielen Dank für das Laden Ihres Fahrzeugs an der <b>Hochschule
+                                                München</b>. Der
                                                 nachfolgende Ladevorgang wurde erfolgreich abgeschlossen. Im Zeitraum
-                                                bis einschließlich <b>31. Dezember 2025</b> fallen für Sie <b>keine Kosten</b> an.
+                                                bis einschließlich <b>31. Dezember 2025</b> fallen für Sie <b>keine
+                                                Kosten</b> an.
                                             </p>
                                             <p style="margin: 0 0 15px;">
-                                                <b>Ab dem 1. Januar 2026 </b>werden Ladevorgänge <b>verbindlich zu den auf dem
-                                                Nutzerportal veröffentlichten Tarifen</b> abgerechnet. Bitte berücksichtigen
+                                                <b>Ab dem 1. Januar 2026 </b>werden Ladevorgänge <b>verbindlich zu den
+                                                auf dem
+                                                Nutzerportal veröffentlichten Tarifen</b> abgerechnet. Bitte
+                                                berücksichtigen
                                                 Sie dies für Ihre zukünftigen Ladevorgänge. Die jeweils gültigen Preise
                                                 können Sie jederzeit online einsehen.
                                             </p>
@@ -81,7 +95,7 @@
 
                                                 <t t-set="total_kwh"
                                                    t-value="sum(object.invoice_line_ids.filtered(lambda l: l.product_uom_id and l.product_uom_id.name == 'kWh').mapped('quantity'))"/>
-                                                <t t-if="total_kwh > 0">
+                                                <t t-if="total_kwh >= 0">
                                                     <p style="margin: 5px 0;">
                                                         <strong>Geladene Energiemenge</strong> <t
                                                         t-out="'%.2f' % total_kwh"/> kWh
@@ -111,7 +125,7 @@
                                                 </t>
                                                 <p style="margin: 15px 0 5px; font-size: 20px; color: #333;">
                                                     <strong>Gesamtbetrag</strong>
-                                                    <span style="color: #667eea; font-size: 24px;"><t
+                                                    <span style="font-size: 24px;"><t
                                                         t-out="object.amount_total"
                                                         t-options="{'widget': 'monetary', 'display_currency': object.currency_id}"/></span>
                                                 </p>
@@ -121,16 +135,6 @@
                                                 Die detaillierte Rechnung finden Sie im Anhang dieser E-Mail.
                                             </p>
 
-                                            <!-- Call to Action
-                                            <t t-if="object.partner_id.id">
-                                                <div style="text-align: center; margin: 25px 0;">
-                                                    <a t-attf-href="/my/invoices/#{object.id}"
-                                                       style="display: inline-block; padding: 12px 30px; background-color: #667eea; color: #ffffff; text-decoration: none; border-radius: 5px; font-weight: bold; font-size: 16px;">
-                                                        Rechnung online ansehen
-                                                    </a>
-                                                </div>
-                                            </t>-->
-
                                             <p>
                                                 Falls Ihr Fahrzeug noch am Ladepunkt steht, bitten wir Sie, dieses
                                                 zeitnah zu entfernen, damit andere Nutzer*innen die Ladeinfrastruktur
@@ -138,18 +142,19 @@
                                             </p>
 
                                             <p style="margin: 20px 0 0; font-size: 13px; color: #666;">
-                                                Sollten Sie Fragen zum Ladeservice haben, stehen wir Ihnen gerne zur Verfügung.
+                                                Sollten Sie Fragen zum Ladeservice haben, stehen wir Ihnen gerne zur
+                                                Verfügung.<br/>
+                                                Bitte antworten Sie nicht direkt auf diese E-Mail.
                                             </p>
                                         </td>
                                     </tr>
-
-                                    <!-- Footer TODO: Should be hardcoded HM contact data.-->
                                     <tr>
                                         <td style="background-color: #f5f5f5; padding: 20px; text-align: center; border-top: 1px solid #e0e0e0;">
                                             <p style="margin: 0 0 10px; color: #666; font-size: 12px;">
-                                                Hochschule München<br/>
+                                                <t t-out="object.company_id.name or ''"/><br/>
                                                 Administration Ladeservice<br/>
-                                                E-Mail: charging-support@hm.edu
+                                                info.laden@hm.edu<br/>
+                                                bei Fragen zu Rechnungen abrechnung.laden@hm.edu
                                             </p>
                                         </td>
                                     </tr>

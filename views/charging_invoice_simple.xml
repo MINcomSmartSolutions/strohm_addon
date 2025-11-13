@@ -16,6 +16,7 @@
                                         Ladesitzungsdetails</h5>
                                 </div>
                             </div>
+                            <br/>
                             <div class="row" style="margin-bottom: 1rem;">
                                 <div class="col-3" t-if="o.session_start">
                                     <strong>Beginn der Ladesitzung</strong><br/>
@@ -39,7 +40,7 @@
                                     <strong>Geladene Energie</strong><br/>
                                     <span t-if="total_kwh > 0" class="text" style="font-size: 1.1em;"
                                           t-esc="'%.2f kWh' % total_kwh"/>
-                                    <span t-if="total_kwh == 0" class="text-muted">N/A</span>
+                                    <span t-if="total_kwh == 0" class="text-muted">0.0</span>
                                 </div>
                                 <div class="col-3" t-if="has_duration">
                                     <strong>Ladedauer</strong><br/>
