@@ -96,3 +96,30 @@ class CustomHome(Home):
         # For regular users, redirect to external URL
         _logger.info("User logout, redirecting to external URL")
         return werkzeug.utils.redirect(self.BACKEND_URL + '/logout')
+
+    @http.route('/web/reset_password', type='http', auth='user', methods=['GET', 'POST'], csrf=False, website=True)
+    def web_auth_reset_password(self, *args, **kw):
+        """
+        Override reset_password to require authentication and disable it for portal users.
+        Portal users authenticate via API keys and should not use password-based authentication.
+        Internal users (admin, employees) can still use password reset.
+        """
+        # Check if user is authenticated
+        if request.env.user._is_public():
+            _logger.warning("Unauthenticated access to reset_password - redirecting to login")
+            return werkzeug.utils.redirect('/web/login')
+
+        # Get the current logged-in user
+        user = request.env.user
+
+        # Check if user is a portal user (has portal group but not internal user group)
+        is_portal = user.has_group('base.group_portal')
+        is_internal = user.has_group('base.group_user')
+
+        if is_portal and not is_internal:
+            _logger.warning(f"Password reset blocked for portal user: {user.login}")
+            return request.render('http_routing.404')
+
+        # For internal users, use parent implementation
+        return super(CustomHome, self).web_auth_reset_password(*args, **kw)
+
