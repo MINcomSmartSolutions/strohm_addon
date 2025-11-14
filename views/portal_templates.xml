@@ -22,6 +22,10 @@
             <!-- This removes the password change section -->
         </xpath>
 
+        <xpath expr="//section[@name='portal_revoke_all_devices_popup']" position="replace">
+            <!-- This removes the revoke all devices popup no need for now-->
+        </xpath>
+
         <!-- Override the account deactivation section to remove password verification -->
         <xpath expr="//section[@name='portal_deactivate_account']//form//p[1]" position="replace">
             <!-- Remove the password verification text -->
