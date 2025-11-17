@@ -15,7 +15,7 @@
     <!-- Override portal_my_security template to remove password change section -->
     <template id="custom_sec" inherit_id="portal.portal_my_security" name="Custom Portal Security Fields" active='true'>
         <xpath expr="//t[@t-call='portal.portal_layout']" position="inside">
-            <t t-set="title">Security - HM Laden</t>
+            <t t-set="title">HM Laden - Security</t>
         </xpath>
         <!-- Remove password change section -->
         <xpath expr="//section[@name='portal_change_password']" position="replace">
@@ -26,26 +26,39 @@
             <!-- This removes the revoke all devices popup no need for now-->
         </xpath>
 
+        <!-- Modify account deactivation section -->
+        <xpath expr="//section[@name='portal_deactivate_account']//form//hr" position="replace">
+        <!-- Remove the horizontal line -->
+        </xpath>
+
+        <!-- Modify account deactivation section -->
+        <xpath expr="//p[@class='text-muted']//b" position="inside">
+            <br/>Sie dürfen Ihr Konto nicht löschen, wenn Sie offene Rechnungen oder laufende Ladesitzungen haben.
+            Informationen zu den Richtlinien für die Datenlöschung finden Sie in den <a href="https://backend.laden.hm.edu/faq">FAQ</a>.
+        </xpath>
+
+        <!-- Add error message display for deactivate account -->
+        <xpath expr="//section[@name='portal_deactivate_account']//form" position="inside">
+            <div t-if="error_message" class="alert alert-danger mt-2" role="alert">
+                <t t-esc="error_message"/>
+            </div>
+        </xpath>
+
         <!-- Override the account deactivation section to remove password verification -->
-        <xpath expr="//section[@name='portal_deactivate_account']//form//p[1]" position="replace">
+        <xpath expr="//section[@name='portal_deactivate_account']//form//p[2]" position="replace">
             <!-- Remove the password verification text -->
         </xpath>
 
         <xpath expr="//section[@name='portal_deactivate_account']//input[@name='password']" position="replace">
             <!-- Remove the password input field -->
         </xpath>
-
-        <!--        <xpath expr="//section[@name='portal_deactivate_account']//div[@t-if='deactivate_error == &quot;password&quot;']" position="replace">-->
-        <!--            &lt;!&ndash; Remove password error message &ndash;&gt;-->
-        <!--        </xpath>-->
-
-        <xpath expr="//section[@name='portal_deactivate_account']//form//hr[1]" position="replace">
-            <!-- Remove first divider -->
+        <xpath expr="//section[@name='portal_deactivate_account']//label[@for='request_blacklist']" position="replace">
+            <!-- Remove the blacklist request label -->
+        </xpath>
+        <xpath expr="//section[@name='portal_deactivate_account']//input[@name='request_blacklist']" position="replace">
+            <!-- Remove the blacklist request checkbox -->
         </xpath>
 
-        <!-- Modify confirmation numbering -->
-        <xpath expr="//section[@name='portal_deactivate_account']//form//p[1]" position="replace">
-        </xpath>
     </template>
 
     <!-- Completely disable TOTP portal section -->
