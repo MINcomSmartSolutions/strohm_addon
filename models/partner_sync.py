@@ -1,6 +1,7 @@
 import logging
 
 from odoo import models, api
+from ..services.backend_service import get_backend_service
 
 _logger = logging.getLogger(__name__)
 
@@ -20,7 +21,6 @@ class PartnerSync(models.Model):
         if not partner_ids:
             return False
 
-        UserSync = self.env['strohm_addon.user_sync']
         partners = self.env['res.partner'].sudo().browse(partner_ids)
 
         for partner in partners:
@@ -106,10 +106,17 @@ class PartnerSync(models.Model):
                 event_type = 'partner_changed'
                 data = {
                     'record_id': partner.id,
-                    'old_data': UserSync._make_json_serializable(normalized_old_data),
-                    'new_data': UserSync._make_json_serializable(changed_values)
+                    'old_data': normalized_old_data,
+                    'new_data': changed_values
                 }
-                UserSync._send_to_backend(event_type, data, user_id=user_id, partner_id=partner.id)
+
+                backend_service = get_backend_service()
+                backend_service.sync_event(
+                    event_type=event_type,
+                    data=data,
+                    user_id=user_id,
+                    partner_id=partner.id
+                )
 
             except Exception as e:
                 _logger.error(f"Failed to sync partner changes for partner {partner.id}: {str(e)}")
@@ -152,8 +159,6 @@ class PartnerSync(models.Model):
             if not partner_data.get('has_portal_user', False):
                 return True
 
-            UserSync = self.env['strohm_addon.user_sync']
-
             # Get user_id if available (from the partner_data)
             user_id = partner_data.get('user_ids', [None])[0]
             partner_id = partner_data.get('id')
@@ -162,11 +167,18 @@ class PartnerSync(models.Model):
             event_type = 'partner_deleted'
             data = {
                 'record_id': partner_id,
-                'old_data': UserSync._make_json_serializable(partner_data),
+                'old_data': partner_data,
                 'new_data': {}
             }
-            UserSync._send_to_backend(event_type, data, user_id=user_id, partner_id=partner_id)
-            return True
+
+            backend_service = get_backend_service()
+            success = backend_service.sync_event(
+                event_type=event_type,
+                data=data,
+                user_id=user_id,
+                partner_id=partner_id
+            )
+            return success
         except Exception as e:
             _logger.error(f"Failed to sync partner deletion: {str(e)}")
             return False

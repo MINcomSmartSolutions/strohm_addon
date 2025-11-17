@@ -1,5 +1,6 @@
 from . import controllers
 from . import models
+from . import services
 from .utils import strohm_init_parameters
 import logging
 

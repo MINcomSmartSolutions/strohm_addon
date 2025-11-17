@@ -50,7 +50,7 @@ class PaymentMethodCheck(BaseRequest):
 class BillLineItem(BaseModel):
     """Schema for individual line items in a bill"""
     sku: str = Field(..., min_length=3, max_length=50)
-    # Quantity and price must be non-negative TODO: should we allow 0?
+    # Quantity and price must be non-negative
     quantity: float = Field(..., ge=0)
     price_unit: float = Field(..., ge=0)
 

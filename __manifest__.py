@@ -26,7 +26,6 @@
         'views/portal_templates.xml',
         'views/charging_session_invoice.xml',
         'views/charging_invoice_simple.xml',
-        # 'views/account_portal_templates.xml',
         'security/ir.model.access.csv',
         'data/user_automations.xml',
         'data/partner_user_integrity_cron.xml',
@@ -38,7 +37,8 @@
             'cryptography',
             'python-dotenv',
             'pydantic',
-            'email-validator'
+            'email-validator',
+            'requests'
         ],
     },
     'application': False,

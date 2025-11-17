@@ -1,12 +1,8 @@
-import datetime
-import json
 import logging
-import os
-
-import requests
 
 from odoo import models, api, _
 from odoo.exceptions import ValidationError
+from ..services.backend_service import get_backend_service
 
 _logger = logging.getLogger(__name__)
 
@@ -98,12 +94,22 @@ class UserSync(models.Model):
                 event_type = 'user_changed'
                 data = {
                     'record_id': user.id,
-                    'old_data': self._make_json_serializable(old_data),
-                    'new_data': self._make_json_serializable(changed_values),
+                    'old_data': old_data,
+                    'new_data': changed_values,
                     'user_id': user.id,
                     'partner_id': user.partner_id.id,
                 }
-                self._send_to_backend(event_type, data, user_id=user.id, partner_id=user.partner_id.id)
+
+                backend_service = get_backend_service()
+                success = backend_service.sync_event(
+                    event_type=event_type,
+                    data=data,
+                    user_id=user.id,
+                    partner_id=user.partner_id.id
+                )
+
+                if not success:
+                    raise ValidationError(_("Failed to sync user changes to backend"))
 
             except ValidationError as ve:
                 # Re-raise validation errors to be shown to the user
@@ -133,72 +139,23 @@ class UserSync(models.Model):
             event_type = 'user_deleted'
             data = {
                 'record_id': user_id,
-                'old_data': self._make_json_serializable(user_data),
+                'old_data': user_data,
                 'new_data': {},
                 'user_id': user_id,
                 'partner_id': partner_id,
             }
-            self._send_to_backend(event_type, data, user_id=user_id, partner_id=partner_id)
-            return True
+
+            backend_service = get_backend_service()
+            success = backend_service.sync_event(
+                event_type=event_type,
+                data=data,
+                user_id=user_id,
+                partner_id=partner_id
+            )
+
+            return success
         except Exception as e:
             _logger.error(f"Failed to sync user deletion: {str(e)}")
             return False
 
-    def _make_json_serializable(self, data):
-        """Clean data for JSON serialization - shared by partner and user sync"""
-        if isinstance(data, dict):
-            return {k: self._make_json_serializable(v) for k, v in data.items()}
-        elif isinstance(data, list):
-            return [self._make_json_serializable(i) for i in data]
-        elif isinstance(data, bytes):
-            import base64
-            return base64.b64encode(data).decode('utf-8')
-        # Handle Odoo model records
-        elif hasattr(data, '_name') and hasattr(data, 'id'):
-            # For model records, return a dictionary with id and name (if available)
-            result = {'id': data.id, 'model': data._name}
-            if hasattr(data, 'name') and data.name:
-                result['name'] = data.name
-            return result
-        # Handle datetime objects
-        elif hasattr(data, 'isoformat'):  # This covers both datetime and date objects
-            return data.isoformat()
-        else:
-            return data
 
-    def _send_to_backend(self, event_type, data, user_id=None, partner_id=None):
-        """Send data to backend with appropriate event type"""
-        backend_url = os.environ.get('BACKEND_HOST', '127.0.0.1')
-        backend_port = os.environ.get('BACKEND_PORT', '3000')
-        backend_url = f"http://{backend_url}:{backend_port}/internal/user/sync"
-        api_key = os.environ.get('WEBHOOK_API_KEY')
-
-        if not backend_url or not backend_url.strip():
-            _logger.error("Backend sync URL not configured")
-            return False
-
-        headers = {
-            'Content-Type': 'application/json',
-            'Authorization': api_key,
-        }
-
-        payload = {
-            'timestamp': datetime.datetime.now().isoformat(),
-            'event': event_type,
-            'user_id': user_id,
-            'partner_id': partner_id,
-            'data': data,
-        }
-
-        response = requests.post(
-            backend_url,
-            headers=headers,
-            data=json.dumps(payload),
-            timeout=10
-        )
-
-        if response.status_code not in (200, 201, 202):
-            _logger.error(f"Backend sync failed: {response.status_code} {response.text}")
-            return False
-
-        return True
