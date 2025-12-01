@@ -12,3 +12,38 @@ msgstr "kWh"
 #: model_terms:ir.ui.view,arch_db:strohm_addon.portal_payment_method_alert
 msgid "There are currently no active payment methods for your account."
 msgstr "Derzeit sind keine aktiven Zahlungsmethoden für Ihr Konto verfügbar."
+
+#. module: strohm_addon
+msgid "You are not allowed to delete your account when you have open bills or open charging sessions."
+msgstr "Sie dürfen Ihr Konto nicht löschen, wenn Sie offene Rechnungen oder offene Ladesitzungen haben."
+
+#. module: strohm_addon
+#: model_terms:ir.ui.view,arch_db:strohm_addon.portal_charging_session_lines
+msgid "Charging Sessions"
+msgstr "Ladesitzungen"
+
+#. module: strohm_addon
+#: model_terms:ir.ui.view,arch_db:strohm_addon.portal_active_charging_session_notice
+msgid "<strong>You have an active charging session</strong>"
+msgstr "<strong>Sie haben eine aktive Ladesitzung</strong>"
+
+#. module: strohm_addon
+#: model_terms:ir.ui.view,arch_db:strohm_addon.portal_active_charging_session_notice
+msgid "<strong>⚠️ Notice:</strong> Your charging session has been running for over 10 hours. Please remember to remove your vehicle so that other users can also use the charging infrastructure."
+msgstr "<strong>⚠️ Hinweis:</strong> Ihre Ladesitzung läuft bereits seit über 10 Stunden. Bitte denken Sie daran, Ihr Fahrzeug zu entfernen, damit auch andere Nutzer*innen die Ladeinfrastruktur verwenden können."
+
+#. module: strohm_addon
+#: model_terms:ir.ui.view,arch_db:strohm_addon.portal_active_charging_session_notice
+msgid "Duration:"
+msgstr "Laufzeit:"
+
+#. module: strohm_addon
+#: model_terms:ir.ui.view,arch_db:strohm_addon.portal_current_electricity_price
+msgid "Current Electricity Price is"
+msgstr "Aktueller Strompreis"
+
+#. module: strohm_addon
+#: model_terms:ir.ui.view,arch_db:strohm_addon.portal_current_electricity_price
+msgid "ct/kWh"
+msgstr "ct/kWh"
+
