@@ -7,6 +7,14 @@
             <t t-set="x_icon">https://mediapool.hm.edu/media/_technik/img/_technik_1/favicon.jpg</t>
         </xpath>
     </template>
+
+    <!-- Conditional container width adjustment - only applies when use_wide_container is set -->
+    <template id="portal_container_width_conditional" name="Portal Container Width Conditional" inherit_id="portal.portal_layout">
+        <xpath expr="//div[@id='wrap']/div[@class='container pt-3 pb-5']" position="attributes">
+            <attribute name="t-attf-class">{{use_wide_container and 'container-fluid pt-3 pb-5 px-3 px-md-4' or 'container pt-3 pb-5'}}</attribute>
+        </xpath>
+    </template>
+
     <!-- Disable sale orders/quotations from portal home page using data record -->
     <record id="sale.portal_my_home_sale" model="ir.ui.view">
         <field name="active" eval="False"/>
@@ -156,6 +164,18 @@
                 <t t-if="electricity_price_ct_kwh is not None">
                     <p class="alert alert-info">Current Electricity Price is <b><t t-esc="electricity_price_ct_kwh"/> ct/kWh</b></p>
                 </t>
+        </xpath>
+    </template>
+
+    <!-- Add external links to portal navbar -->
+    <template id="custom_portal_navbar_links" inherit_id="web.frontend_layout" name="Custom Portal Navbar Links">
+        <xpath expr="//ul[@id='top_menu']" position="inside">
+            <li class="nav-item">
+                <a href="https://backend.laden.hm.edu/faq" class="nav-link" target="_blank">FAQ</a>
+            </li>
+            <li class="nav-item">
+                <a href="https://backend.laden.hm.edu/agb" class="nav-link" target="_blank">AGB</a>
+            </li>
         </xpath>
     </template>
 </odoo>

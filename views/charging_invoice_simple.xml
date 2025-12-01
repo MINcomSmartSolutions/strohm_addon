@@ -31,7 +31,7 @@
                             </div>
                             <div class="row">
                                 <t t-set="total_kwh"
-                                   t-value="sum(line.quantity for line in o.invoice_line_ids.filtered(lambda l: l.product_uom_id and l.product_uom_id.name == 'kWh'))"/>
+                                   t-value="sum((line.quantity for line in o.invoice_line_ids.filtered(lambda l: l.product_uom_id and l.product_uom_id.name == 'kWh')), 0)"/>
                                 <t t-set="has_duration" t-value="o.session_start and o.session_end"/>
                                 <t t-if="has_duration" t-set="duration" t-value="o.session_end - o.session_start"/>
                                 <t t-if="has_duration" t-set="duration_hours"

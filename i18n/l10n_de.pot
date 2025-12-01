@@ -47,3 +47,23 @@ msgstr "Aktueller Strompreis"
 msgid "ct/kWh"
 msgstr "ct/kWh"
 
+#. module: strohm_addon
+#: model_terms:ir.ui.view,arch_db:strohm_addon.portal_my_invoices_inherit
+msgid "Session Start"
+msgstr "Beginn der Ladesitzung"
+
+#. module: strohm_addon
+#: model_terms:ir.ui.view,arch_db:strohm_addon.portal_my_invoices_inherit
+msgid "Session End"
+msgstr "Ende der Ladesitzung"
+
+#. module: strohm_addon
+#: model_terms:ir.ui.view,arch_db:strohm_addon.portal_my_invoices_inherit
+msgid "Charged Energy (kWh)"
+msgstr "Geladene Energie (kWh)"
+
+#. module: strohm_addon
+#: model_terms:ir.ui.view,arch_db:strohm_addon.portal_my_invoices_inherit
+msgid "Price per kWh"
+msgstr "Preis pro kWh"
+
