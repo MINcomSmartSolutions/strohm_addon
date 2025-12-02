@@ -1,0 +1,70 @@
+// ============================================================================
+// Strohm Custom Styles
+// ============================================================================
+// This file contains custom styles that extend Bootstrap components
+// or add Strohm-specific styling to portal pages.
+// Added to web.assets_frontend bundle.
+
+// Define primary color for use in this file
+$strohm-primary: #3D46D9;
+
+// Custom Primary Button Styling
+// ----------------------------------------------------------------------------
+// Override the primary button with custom design
+.btn-primary {
+    font-size: 1.25rem;
+    color: #161616;
+    background-color: transparent;
+    max-width: 100%;
+    display: inline-flex;
+    text-align: center;
+    text-decoration: none;
+    border: #161616 1px solid;
+    vertical-align: middle;
+    padding: 0.6rem 2.8rem;
+    line-height: 1.4;
+    justify-content: center;
+    align-items: center;
+
+    &:hover,
+    &:focus {
+        color: white;
+        background-color: $strohm-primary;
+        border-color: $strohm-primary;
+    }
+
+    &:active {
+        background-color: #161616;
+    }
+
+    @media (max-width: 991.98px) {
+        margin-bottom: 2rem;
+        font-size: 1.8rem;
+        line-height: 1.2;
+        width: 100%;
+    }
+}
+
+// Focus Styles
+// ----------------------------------------------------------------------------
+// Ensure consistent focus styles for accessibility
+button.btn-link:focus-visible,
+button.accordion-button:focus-visible {
+    outline: 1px solid $strohm-primary;
+}
+
+// Form Submit Button (Odoo specific)
+// ----------------------------------------------------------------------------
+.modern .XItem.XSubmit.btnSubmit {
+    @extend .btn-primary;
+}
+
+.btn-light {
+    border: #161616 1px solid;
+    background-color: transparent;
+}
+.btn-light:hover,
+.btn-light:focus {
+    background-color: $strohm-primary;
+    color: white;
+}

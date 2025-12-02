@@ -27,8 +27,8 @@ class ChargingSessionInvoice(models.TransientModel):
                 - base_price (float): Standard list price for product (e.g., 0.35).
                 - custom_rate (float): Actual invoice price (e.g., 0.38).
                 - quantity (float): Consumed quantity (e.g., 150, in kWh).
-            due_date (Datetime): Optional due date for the invoice. Default one month from today.
-            invoice_due_date (Datetime): Optional invoice due date. Default today.
+            due_date (Datetime): Optional due date for the invoice.
+            invoice_due_date (Datetime): Optional invoice due date.
         Returns:
             recordset: The created `account.move` record.
         """
@@ -240,6 +240,23 @@ class AccountMove(models.Model):
         'charging.session.timeline', 'move_id',
         string='Charging Session Timeline'
     )
+
+    total_kwh = fields.Float(
+        string='Total Charged Energy (kWh)',
+        compute='_compute_total_kwh',
+        store=True,
+        help='Total energy charged in kWh'
+    )
+
+    @api.depends('invoice_line_ids.quantity', 'invoice_line_ids.product_uom_id')
+    def _compute_total_kwh(self):
+        """Calculate total kWh from invoice lines with kWh unit of measure"""
+        for record in self:
+            total = 0.0
+            for line in record.invoice_line_ids:
+                if line.product_uom_id and line.product_uom_id.name == 'kWh':
+                    total += line.quantity
+            record.total_kwh = total
 
     # In case utc datetime is needed in a specific format
 
