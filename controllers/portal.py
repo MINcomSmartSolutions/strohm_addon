@@ -1,5 +1,6 @@
 import logging
 import os
+from datetime import datetime
 
 import werkzeug
 from werkzeug import urls
@@ -71,9 +72,10 @@ class CustomCustomerPortal(CustomerPortal):
 
         success, data, error = backend_service.get_internal(endpoint)
         if success and data:
-            price = data.get('price_ct_kwh')
+            price = data.get('price_data').get('price_ct_kwh', None)
+            valid_till = data.get('price_data').get('valid_till', None)
             _logger.info(f"Electricity price retrieved successfully: {price} ct/kWh")
-            return price
+            return price, valid_till
         else:
             _logger.error(f"Error fetching electricity price: {error}")
             return None
@@ -159,9 +161,24 @@ class CustomCustomerPortal(CustomerPortal):
     def _prepare_portal_layout_values(self):
         portal_layout_values = super()._prepare_portal_layout_values()
         try:
-            price = self._get_electricity_price() # To show the current price for info
+            price, valid_till = self._get_electricity_price() # To show the current price for info
             if price is not None:
                 portal_layout_values['electricity_price_ct_kwh'] = price
+            if valid_till is not None:
+                # Format the datetime string to German format (dd.MM.yyyy HH:mm)
+                try:
+                    # Parse ISO format datetime string from API
+                    dt = datetime.fromisoformat(valid_till.replace('Z', '+00:00'))
+                    # Convert to user's timezone (assuming Europe/Berlin)
+                    user_tz = request.env.user.tz or 'Europe/Berlin'
+                    import pytz
+                    dt_utc = dt.replace(tzinfo=pytz.UTC) if dt.tzinfo is None else dt
+                    dt_local = dt_utc.astimezone(pytz.timezone(user_tz))
+                    # Format as dd.MM.yyyy HH:mm
+                    portal_layout_values['electricity_price_valid_till'] = dt_local.strftime('%d.%m.%Y %H:%M')
+                except (ValueError, AttributeError) as e:
+                    _logger.warning(f"Error formatting valid_till datetime: {e}")
+                    portal_layout_values['electricity_price_valid_till'] = valid_till
 
             if request.env.user.partner_id.id and request.env.user.id:
                 has_active_sessions, api_error, session_data = self._check_active_charging_sessions(

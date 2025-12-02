@@ -91,7 +91,7 @@
         <xpath expr="//div[hasclass('o_portal_my_home')]" position="before">
                 <t t-if="has_active_charging_session">
                    <div id="charging_session_alert" class="alert alert-info" style="position: relative;">
-                       <span class="blink-dot" style="position: absolute; top: 10px; right: 10px; display: inline-block; width: 8px; height: 8px; background-color: #0dcaf0; border-radius: 50%; animation: blink 1s infinite;"></span>
+                       <span class="blink-dot" style="position: absolute; top: 10px; right: 10px; display: inline-block; width: 12px; height: 12px; background-color: #0dcaf0; border-radius: 50%; animation: blink 1s infinite;"></span>
                        <p class="mb-2"><strong>You have an active charging session</strong></p>
                        <t t-if="active_charging_session_data and active_charging_session_data.get('start_timestamp')">
                            <p class="mb-0">Duration: <span id="charging_timer" t-att-data-start-time="active_charging_session_data['start_timestamp']">00:00:00</span></p>
@@ -161,9 +161,19 @@
 
     <template id="portal_current_electricity_price" inherit_id="portal.portal_my_home" name="Portal Current Electricity Price">
         <xpath expr="//div[hasclass('o_portal_my_home')]" position="before">
-                <t t-if="electricity_price_ct_kwh is not None">
-                    <p class="alert alert-info">Current Electricity Price is <b><t t-esc="electricity_price_ct_kwh"/> ct/kWh</b></p>
-                </t>
+        <t t-if="electricity_price_ct_kwh is not None">
+            <div class="alert alert-info">
+                    <span>Current Electricity Price is <b><t t-esc="electricity_price_ct_kwh"/> cent pro kWh</b>
+                        <t t-if="electricity_price_valid_till is not None">
+                            and will be available till <b><t t-esc="electricity_price_valid_till"/></b>
+                        </t>
+                    </span>
+                       <t t-if="electricity_price_valid_till is not None">
+                             <t t-set="popover_content">Subject to change. Check back for the new cost of electricity after this prices' validation ends.</t>
+                             <i tabindex="0" class="bi bi-info-square-fill d-inline-block" data-bs-toggle="popover" data-bs-trigger="hover focus" t-att-data-bs-content="popover_content"></i>
+                       </t>
+            </div>
+        </t>
         </xpath>
     </template>
 

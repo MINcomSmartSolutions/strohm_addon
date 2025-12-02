@@ -40,12 +40,22 @@ msgstr "Laufzeit:"
 #. module: strohm_addon
 #: model_terms:ir.ui.view,arch_db:strohm_addon.portal_current_electricity_price
 msgid "Current Electricity Price is"
-msgstr "Aktueller Strompreis"
+msgstr "Aktueller Strompreis ist"
 
 #. module: strohm_addon
 #: model_terms:ir.ui.view,arch_db:strohm_addon.portal_current_electricity_price
-msgid "ct/kWh"
-msgstr "ct/kWh"
+msgid "and will be available till"
+msgstr "und gilt bis"
+
+#. module: strohm_addon
+#: model_terms:ir.ui.view,arch_db:strohm_addon.portal_current_electricity_price
+msgid "Subject to change. Check back for the new cost of electricity after this prices' validation ends."
+msgstr "Änderungen vorbehalten. Prüfen Sie die neuen Stromkosten nach Ablauf der Gültigkeit dieses Preises."
+
+#. module: strohm_addon
+#: model_terms:ir.ui.view,arch_db:strohm_addon.portal_current_electricity_price
+msgid "cent pro kWh"
+msgstr "cent pro kWh"
 
 #. module: strohm_addon
 #: model_terms:ir.ui.view,arch_db:strohm_addon.portal_my_invoices_inherit
@@ -66,4 +76,8 @@ msgstr "Geladene Energie (kWh)"
 #: model_terms:ir.ui.view,arch_db:strohm_addon.portal_my_invoices_inherit
 msgid "Price per kWh"
 msgstr "Preis pro kWh"
+
+
+
+
 
