@@ -4,13 +4,12 @@
         <record id="email_template_charging_invoice" model="mail.template">
             <field name="name">Kostenlos Lade Rechnung Email</field>
             <field name="model_id" ref="account.model_account_move"/>
-            <field name="subject">Information zu Ihrem Ladevorgang am {{ format_date(object.session_start if hasattr(object,'session_start') and object.session_start else object.invoice_date,date_format='dd.MM.yyyy') }}</field>
+            <field name="subject">Information zu Ihrem Ladevorgang{{ (' am ' + format_date(object.session_start, date_format='dd.MM.yyyy')) if object.session_start else '' }}</field>
             <field name="email_from">{{ object.company_id.name }} &lt;no-reply.laden@hm.edu&gt;</field>
             <field name="email_to">{{ object.partner_id.email }}</field>
-            <field name="reply_to">{{ object.company_id.name }} &lt;abrechnung.laden@hm.edu&gt;</field>
+            <field name="reply_to">&lt;abrechnung.laden@hm.edu&gt;</field>
             <field name="lang">{{ object.partner_id.lang }}</field>
             <field name="description">Used to send emails regarding charging session invoices to customers. Should beonly used till 01.01.26</field>
-            <!--            <field name="use_default_to" eval="False"/>-->
             <field name="auto_delete" eval="False"/>
             <field name="report_template_ids" eval="[(4, ref('account.account_invoices'))]"/>
             <field name="body_html" type="html">
