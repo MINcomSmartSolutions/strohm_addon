@@ -10,7 +10,7 @@
 
     <!-- Conditional container width adjustment - only applies when use_wide_container is set -->
     <template id="portal_container_width_conditional" name="Portal Container Width Conditional" inherit_id="portal.portal_layout">
-        <xpath expr="//div[@id='wrap']/div[@class='container pt-3 pb-5']" position="attributes">
+        <xpath expr="//div[@id='wrap']/div[hasclass('container', 'pt-3', 'pb-5')]" position="attributes">
             <attribute name="t-attf-class">{{use_wide_container and 'container-fluid pt-3 pb-5 px-3 px-md-4' or 'container pt-3 pb-5'}}</attribute>
         </xpath>
     </template>
@@ -40,7 +40,7 @@
         </xpath>
 
         <!-- Modify account deactivation section -->
-        <xpath expr="//p[@class='text-muted']//b" position="inside">
+        <xpath expr="//p[hasclass('text-muted')]//b" position="inside">
             <br/>Sie dürfen Ihr Konto nicht löschen, wenn Sie offene Rechnungen oder laufende Ladesitzungen haben.
             Informationen zu den Richtlinien für die Datenlöschung finden Sie in den <a href="https://backend.laden.hm.edu/faq">FAQ</a>.
         </xpath>

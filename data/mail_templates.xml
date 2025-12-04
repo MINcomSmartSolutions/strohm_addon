@@ -5,7 +5,7 @@
             <field name="name">Kostenlos Lade Rechnung Email</field>
             <field name="model_id" ref="account.model_account_move"/>
             <field name="subject">Information zu Ihrem Ladevorgang am {{ format_date(object.session_start if hasattr(object,'session_start') and object.session_start else object.invoice_date,date_format='dd.MM.yyyy') }}</field>
-            <field name="email_from">{{ object.company_id.name }} &lt;no-reply@hm.edu&gt;</field>
+            <field name="email_from">{{ object.company_id.name }} &lt;no-reply.laden@hm.edu&gt;</field>
             <field name="email_to">{{ object.partner_id.email }}</field>
             <field name="reply_to">{{ object.company_id.name }} &lt;abrechnung.laden@hm.edu&gt;</field>
             <field name="lang">{{ object.partner_id.lang }}</field>
