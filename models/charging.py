@@ -14,66 +14,155 @@ class ChargingSessionInvoice(models.TransientModel):
     @api.model
     def generate(self, session_start, session_end, partner, lines_data, invoice_due_date=None, invoice_date=None):
         """
-        Generate an invoice for a charging session.
+        Generate a Sale Order with charging session lines and create a draft invoice.
+
+        This method creates a Sale Order, confirms it, and generates a draft invoice.
+        Session start/end times are stored on each line item, allowing multiple sessions per invoice.
+        The invoice is left in draft state for review before posting.
 
         Args:
             session_start (Datetime): Session start datetime UTC
             session_end (Datetime): Session end datetime UTC
             partner (res.partner): The partner for whom the invoice is created.
-            lines_data (BillLineItem): List of dictionaries containing line item data for the invoice.
-                - name (str): Product name.
+            lines_data (BillLineItem): List of objects containing line item data for the invoice.
                 - sku (str): Internal reference for product.
-                - uom_name (str): Unit of measure name (e.g., "kWh"; only "kWh" accepted for now).
-                - base_price (float): Standard list price for product (e.g., 0.35).
-                - custom_rate (float): Actual invoice price (e.g., 0.38).
                 - quantity (float): Consumed quantity (e.g., 150, in kWh).
-            due_date (Datetime): Optional due date for the invoice.
+                - price_unit (float): Actual invoice price per unit (e.g., 0.38).
             invoice_due_date (Datetime): Optional invoice due date.
+            invoice_date (Datetime): Optional invoice date.
         Returns:
-            recordset: The created `account.move` record.
+            recordset: The created draft `account.move` (invoice) record.
         """
-
-        AccountMove = self.env['account.move']
+        SaleOrder = self.env['sale.order']
         Partner = self.env['res.partner'].browse(partner.id)
         if not Partner or not Partner.exists():
             raise ValidationError('Partner not found for the user. Please ensure the user has a valid partner record.')
 
-        invoice_lines = []
+        # Build order lines with session data
+        order_lines = []
         for data in lines_data:
             # Find product (but don't create or modify it)
             product = self.sudo()._get_or_create_product(data)
 
-            # Build the invoice line vals - use direct attribute access instead of .get()
+            # Build the sale order line vals
             qty = data.quantity
             price_unit = data.price_unit
-            invoice_lines.append((0, 0, {
+            order_lines.append((0, 0, {
                 'product_id': product.id,
-                'quantity': qty,
+                'product_uom_qty': qty,
+                'qty_delivered': qty,
                 'price_unit': price_unit,
-                'tax_ids': [(6, 0, product.taxes_id.ids)],  # Copy taxes from product
+                'session_start': session_start,
+                'session_end': session_end,
+                'tax_id': [(6, 0, product.taxes_id.ids)],
             }))
 
-        # Create the draft customer invoice
-        move_vals = {
-            'move_type': 'out_invoice',  # customer invoice
-            'invoice_date': invoice_date.strftime(
-                DEFAULT_SERVER_DATETIME_FORMAT) if invoice_date else fields.Date.today(),
-            'invoice_date_due': invoice_due_date.strftime(
-                DEFAULT_SERVER_DATETIME_FORMAT) if invoice_due_date else fields.Date.add(
-                fields.Date.today(), months=1),
+        # Create the Sale Order
+        order_vals = {
             'partner_id': Partner.id,
-            'invoice_line_ids': invoice_lines,
-            'session_start': session_start.strftime(DEFAULT_SERVER_DATETIME_FORMAT),
-            'session_end': session_end.strftime(DEFAULT_SERVER_DATETIME_FORMAT),
+            'order_line': order_lines,
+            'date_order': invoice_date or fields.Datetime.now(),
         }
 
-        invoice = AccountMove.create(move_vals)
+        sale_order = SaleOrder.create(order_vals)
+        _logger.info(f"Created Sale Order {sale_order.name} for partner {Partner.name}")
 
-        # TODO: post immediately
+        # Confirm the Sale Order
+        sale_order.action_confirm()
+        _logger.info(f"Confirmed Sale Order {sale_order.name}")
 
-        # invoice.action_post()
+        # Create the invoice from the Sale Order
+        invoice = self._create_invoice_from_sale_order(sale_order, invoice_date, invoice_due_date)
 
         return invoice
+
+    @api.model
+    def _create_invoice_from_sale_order(self, sale_order, invoice_date=None, invoice_due_date=None):
+        """
+        Create a draft invoice from a confirmed Sale Order.
+
+        Args:
+            sale_order: The confirmed sale.order record
+            invoice_date: Optional invoice date
+            invoice_due_date: Optional invoice due date
+
+        Returns:
+            recordset: The created draft account.move record
+        """
+        # Use Odoo's standard invoicing mechanism
+        # This will automatically call _prepare_invoice_line which propagates session fields
+        invoice = sale_order._create_invoices()
+
+        # Update invoice dates if provided
+        invoice_vals = {}
+        if invoice_date:
+            invoice_vals['invoice_date'] = invoice_date.strftime(
+                DEFAULT_SERVER_DATETIME_FORMAT) if hasattr(invoice_date, 'strftime') else invoice_date
+        if invoice_due_date:
+            invoice_vals['invoice_date_due'] = invoice_due_date.strftime(
+                DEFAULT_SERVER_DATETIME_FORMAT) if hasattr(invoice_due_date, 'strftime') else invoice_due_date
+        else:
+            # Default: due in 1 month
+            invoice_vals['invoice_date_due'] = fields.Date.add(fields.Date.today(), months=1)
+
+        if invoice_vals:
+            invoice.write(invoice_vals)
+
+        _logger.info(f"Created draft invoice {invoice.name} from Sale Order {sale_order.name}")
+
+        return invoice
+
+    @api.model
+    def migrate_invoice_sessions_to_lines(self):
+        """
+        Migrate existing invoices with header-level session_start/session_end
+        to line-level fields.
+
+        This method finds all account.move records with session data on the header
+        and copies that data to each invoice line.
+
+        Returns:
+            dict: Summary of migration results
+        """
+        AccountMove = self.env['account.move']
+
+        # Find invoices with session data on header (using the old fields)
+        invoices_with_sessions = AccountMove.search([
+            ('move_type', '=', 'out_invoice'),
+            '|',
+            ('session_start', '!=', False),
+            ('session_end', '!=', False),
+        ])
+
+        migrated_count = 0
+        line_count = 0
+
+        for invoice in invoices_with_sessions:
+            session_start = invoice.session_start
+            session_end = invoice.session_end
+
+            if not session_start and not session_end:
+                continue
+
+            # Update all invoice lines with the session data
+            for line in invoice.invoice_line_ids.filtered(lambda l: l.display_type == 'product'):
+                line.write({
+                    'session_start': session_start,
+                    'session_end': session_end,
+                })
+                line_count += 1
+
+            migrated_count += 1
+            _logger.info(f"Migrated session data for invoice {invoice.name}: "
+                        f"start={session_start}, end={session_end}")
+
+        _logger.info(f"Migration complete: {migrated_count} invoices, {line_count} lines updated")
+
+        return {
+            'success': True,
+            'invoices_migrated': migrated_count,
+            'lines_updated': line_count,
+        }
 
     @api.model
     def ensure_standard_products(self):
@@ -207,38 +296,25 @@ class ChargingSessionInvoice(models.TransientModel):
         return product
 
 
-class SessionTimeline(models.Model):
-    _name = 'charging.session.timeline'
-    _description = 'Charging Session Timeline'
-
-    # Use delegation inheritance instead of direct inheritance
-    move_id = fields.Many2one('account.move', string='Related Invoice',
-                              required=True, ondelete='cascade',
-                              auto_join=True, delegate=True, index=True)
-
-    # All dates are stored in UTC and formatted on the client side
-    session_start = fields.Datetime(string='Charging Session Start', readonly=False)
-    session_end = fields.Datetime(string='Charging Session End', readonly=False)
-
-
 class AccountMove(models.Model):
+    """
+    Extend account.move to add computed session fields based on invoice lines.
+    This provides backward compatibility for reports and templates that reference
+    session_start/session_end on the invoice header.
+    """
     _inherit = 'account.move'
 
     session_start = fields.Datetime(
         string='Session Start',
-        related='charging_session_timeline_id.session_start',
+        compute='_compute_session_times',
         store=True,
-        readonly=False,
+        help='Earliest session start time from invoice lines'
     )
     session_end = fields.Datetime(
         string='Session End',
-        related='charging_session_timeline_id.session_end',
+        compute='_compute_session_times',
         store=True,
-        readonly=False,
-    )
-    charging_session_timeline_id = fields.One2many(
-        'charging.session.timeline', 'move_id',
-        string='Charging Session Timeline'
+        help='Latest session end time from invoice lines'
     )
 
     total_kwh = fields.Float(
@@ -248,46 +324,22 @@ class AccountMove(models.Model):
         help='Total energy charged in kWh'
     )
 
+    @api.depends('invoice_line_ids.session_start', 'invoice_line_ids.session_end')
+    def _compute_session_times(self):
+        """Compute session times from invoice lines (earliest start, latest end)"""
+        for record in self:
+            starts = record.invoice_line_ids.filtered('session_start').mapped('session_start')
+            ends = record.invoice_line_ids.filtered('session_end').mapped('session_end')
+            record.session_start = min(starts) if starts else False
+            record.session_end = max(ends) if ends else False
+
     @api.depends('invoice_line_ids.quantity', 'invoice_line_ids.product_uom_id')
     def _compute_total_kwh(self):
-        """Calculate total kWh from invoice lines with kWh unit of measure"""
+        """Calculate total kWh from invoice lines with Energy unit of measure category"""
+        energy_category = self.env.ref('strohm_addon.uom_categ_energy', raise_if_not_found=False)
         for record in self:
             total = 0.0
             for line in record.invoice_line_ids:
-                if line.product_uom_id and line.product_uom_id.name == 'kWh':
+                if line.product_uom_id and energy_category and line.product_uom_id.category_id == energy_category:
                     total += line.quantity
             record.total_kwh = total
-
-    # In case utc datetime is needed in a specific format
-
-    # session_start_tz = fields.Char(
-    #     string="Session Start (Formatted)",
-    #     compute='_compute_session_times'
-    # )
-    #
-    # session_end_tz = fields.Char(
-    #     string="Session End (Formatted)",
-    #     compute='_compute_session_times'
-    # )
-    #
-    # @api.depends('session_start', 'session_end')
-    # def _compute_session_times(self):
-    #     target_timezone = 'Europe/Berlin'  # Replace with your desired timezone
-    #     time_format = '%d.%m.%Y %H:%M'  # German format example
-    #
-    #     for record in self:
-    #         # Convert session_start
-    #         if record.session_start:
-    #             utc_dt = pytz.utc.localize(record.session_start)
-    #             local_dt = utc_dt.astimezone(pytz.timezone(target_timezone))
-    #             record.session_start_tz = local_dt.strftime(time_format)
-    #         else:
-    #             record.session_start_tz = ''
-    #
-    #         # Convert session_end
-    #         if record.session_end:
-    #             utc_dt = pytz.utc.localize(record.session_end)
-    #             local_dt = utc_dt.astimezone(pytz.timezone(target_timezone))
-    #             record.session_end_tz = local_dt.strftime(time_format)
-    #         else:
-    #             record.session_end_tz = ''

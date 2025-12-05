@@ -58,26 +58,81 @@ msgid "ct/kWh"
 msgstr "ct/kWh"
 
 #. module: strohm_addon
-#: model_terms:ir.ui.view,arch_db:strohm_addon.portal_my_invoices_inherit
+#: model_terms:ir.ui.view,arch_db:strohm_addon.portal_my_orders_inherit
 msgid "Session Start"
 msgstr "Beginn der Ladesitzung"
 
 #. module: strohm_addon
-#: model_terms:ir.ui.view,arch_db:strohm_addon.portal_my_invoices_inherit
+#: model_terms:ir.ui.view,arch_db:strohm_addon.portal_my_orders_inherit
 msgid "Session End"
 msgstr "Ende der Ladesitzung"
 
 #. module: strohm_addon
-#: model_terms:ir.ui.view,arch_db:strohm_addon.portal_my_invoices_inherit
-msgid "Charged Energy (kWh)"
-msgstr "Geladene Energie (kWh)"
+#: model_terms:ir.ui.view,arch_db:strohm_addon.portal_my_orders_inherit
+msgid "Charged Energy"
+msgstr "Geladene Energie"
 
 #. module: strohm_addon
-#: model_terms:ir.ui.view,arch_db:strohm_addon.portal_my_invoices_inherit
+#: model_terms:ir.ui.view,arch_db:strohm_addon.portal_my_orders_inherit
 msgid "Price per kWh"
 msgstr "Preis pro kWh"
 
+#. module: strohm_addon
+#: model_terms:ir.ui.view,arch_db:strohm_addon.report_invoice_document_charging
+msgid "Charging Session Details"
+msgstr "Ladesitzungsdetails"
 
+#. module: strohm_addon
+#: model_terms:ir.ui.view,arch_db:strohm_addon.report_invoice_document_charging
+msgid "<strong>Session Start</strong><br/>"
+msgstr "<strong>Beginn der Ladesitzung</strong><br/>"
 
+#. module: strohm_addon
+#: model_terms:ir.ui.view,arch_db:strohm_addon.report_invoice_document_charging
+msgid "<strong>Session End</strong><br/>"
+msgstr "<strong>Ende der Ladesitzung</strong><br/>"
 
+#. module: strohm_addon
+#: model_terms:ir.ui.view,arch_db:strohm_addon.report_invoice_document_charging
+msgid "<strong>Charged Energy</strong><br/>"
+msgstr "<strong>Geladene Energie</strong><br/>"
 
+#. module: strohm_addon
+#: model_terms:ir.ui.view,arch_db:strohm_addon.report_invoice_document_charging
+msgid "<strong>Charging Duration</strong><br/>"
+msgstr "<strong>Ladedauer</strong><br/>"
+
+#. module: strohm_addon
+#: model_terms:ir.ui.view,arch_db:strohm_addon.report_invoice_document_charging
+msgid "<strong>Average Power</strong><br/>"
+msgstr "<strong>Durchschnittliche Leistung</strong><br/>"
+
+#. module: strohm_addon
+#: model_terms:ir.ui.view,arch_db:strohm_addon.report_invoice_document_charging
+msgid "<span>Reference</span></th>"
+msgstr "<span>Verweis</span></th>"
+
+#. module: strohm_addon
+#: model_terms:ir.ui.view,arch_db:strohm_addon.report_invoice_document_charging
+msgid "<span>Start</span>"
+msgstr "<span>Beginn</span>"
+
+#. module: strohm_addon
+#: model_terms:ir.ui.view,arch_db:strohm_addon.report_invoice_document_charging
+msgid "<span>End</span>"
+msgstr "<span>Ende</span>"
+
+#. module: strohm_addon
+#: model_terms:ir.ui.view,arch_db:strohm_addon.report_invoice_document_charging
+msgid "h"
+msgstr "Std."
+
+#. module: strohm_addon
+#: model_terms:ir.ui.view,arch_db:strohm_addon.report_invoice_document_charging
+msgid "min"
+msgstr "Min."
+
+#. module: strohm_addon
+#: model_terms:ir.ui.view,arch_db:strohm_addon.report_invoice_document_charging
+msgid "sec"
+msgstr "Sek."

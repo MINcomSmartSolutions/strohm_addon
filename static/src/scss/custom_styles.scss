@@ -68,3 +68,7 @@ button.accordion-button:focus-visible {
     background-color: $strohm-primary;
     color: white;
 }
+
+.rounded-pill {
+    border-radius: 0 !important;  // or your preferred value
+}
