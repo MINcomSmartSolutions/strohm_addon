@@ -29,10 +29,10 @@
             <field name="arch" type="xml">
                 <xpath expr="//field[@name='date_order']" position="after">
                     <field name="session_start"
-                           string="Beginn"
+                           string="Session Start"
                            optional="show"/>
                     <field name="session_end"
-                           string="Ende"
+                           string="Session End"
                            optional="show"/>
                     <field name="total_kwh"
                            string="kWh"
@@ -51,11 +51,11 @@
                 <xpath expr="//field[@name='order_line']/list/field[@name='price_unit']" position="after">
                     <field name="session_start"
                            string="Session Start"
-                           optional="hide"
+                           optional="show"
                            readonly="parent.state in ['sale', 'done', 'cancel']"/>
                     <field name="session_end"
                            string="Session End"
-                           optional="hide"
+                           optional="show"
                            readonly="parent.state in ['sale', 'done', 'cancel']"/>
                 </xpath>
             </field>

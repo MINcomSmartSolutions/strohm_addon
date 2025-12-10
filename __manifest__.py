@@ -32,10 +32,10 @@
         'data/uom_data.xml',
         'data/mail_templates.xml',
         'views/portal_templates.xml',
-        'views/account_portal_templates.xml',
-        'views/charging_session_invoice.xml',
+        'views/strohm_portal_templates.xml',
+        'views/account_move_internal_extra_fields.xml',
         'views/charging_invoice_simple.xml',
-        'views/sale_order_charging_session.xml',
+        'views/sale_order_internal_extra_fields.xml',
     ],
     'assets': {
         # Odoo website primary variables (colors, fonts, etc.)

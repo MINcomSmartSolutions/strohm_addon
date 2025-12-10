@@ -20,6 +20,10 @@ class SaleOrderLine(models.Model):
         string='Session End',
         help='End datetime of the charging session (UTC)'
     )
+    session_backend_ref = fields.Integer(
+        string='Session Backend Reference',
+        help='Reference ID of the charging session in the backend system'
+    )
 
     def _prepare_invoice_line(self, **optional_values):
         """
@@ -30,6 +34,8 @@ class SaleOrderLine(models.Model):
             res['session_start'] = self.session_start
         if self.session_end:
             res['session_end'] = self.session_end
+        if self.session_backend_ref:
+            res['session_backend_ref'] = self.session_backend_ref
         return res
 
 
@@ -47,6 +53,10 @@ class AccountMoveLine(models.Model):
     session_end = fields.Datetime(
         string='Session End',
         help='End datetime of the charging session (UTC)'
+    )
+    session_backend_ref = fields.Integer(
+        string='Session Backend Reference',
+        help='Reference ID of the charging session in the backend system'
     )
 
 

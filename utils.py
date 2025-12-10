@@ -22,7 +22,6 @@ def strohm_init_parameters(env):
     # Set default language and timezone context
     env.context = dict(env.context, lang='de_DE')
     env.context = dict(env.context, tz='Europe/Berlin')
-
     # Disable default digest emails
     try:
         env['ir.config_parameter'].sudo().set_param('digest.default_digest_emails', 'False')
@@ -97,6 +96,13 @@ def strohm_init_parameters(env):
             _logger.warning("No company found in environment")
     except Exception as e:
         _logger.warning("Failed to check company fiscal country: %s", e)
+
+    # Migrate old invoice session data to lines to preserve it against recomputation
+    try:
+        _logger.info("Starting migration of old invoice session data to lines...")
+        env['charging.session.invoice'].sudo().migrate_invoice_sessions_to_lines()
+    except Exception as e:
+        _logger.warning("Failed to migrate invoice session data: %s", e)
 
 
 def ensure_standard_products(env):

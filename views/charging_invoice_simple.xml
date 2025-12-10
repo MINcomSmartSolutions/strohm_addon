@@ -3,10 +3,10 @@
     <data>
         <!-- Inherit the standard invoice document and add charging session info -->
         <template id="report_invoice_document_charging" inherit_id="account.report_invoice_document">
-            <!-- Add charging session information after the informations div -->
+            <!-- Add charging session information after the information div -->
             <xpath expr="//div[@id='informations']" position="after">
                 <!-- Count lines with session data -->
-                <t t-set="session_lines" t-value="o.invoice_line_ids.filtered(lambda l: l.session_start or l.session_end)"/>
+               <t t-set="session_lines" t-value="o.invoice_line_ids.filtered(lambda l: l.session_start and l.session_end)"/>
                 <t t-set="session_count" t-value="len(session_lines)"/>
                 
                 <!-- Single Session: Show Ladesitzungsdetails block -->
@@ -92,7 +92,8 @@
             <xpath expr="//table[@name='invoice_line_table']//th[@name='th_description']" position="before">
                 <t t-set="has_refs" t-value="any(line.sale_line_ids for line in o.invoice_line_ids.filtered(lambda l: l.display_type == 'product'))"/>
                 <th t-if="has_refs" name="th_reference" class="text-start">
-                <span>Reference</span></th>
+                    Verweis
+                </th>
             </xpath>
 
             <!-- Add Verweis (Reference) column to invoice lines table body -->
@@ -105,7 +106,7 @@
             </xpath>
 
             <!-- Add session columns to invoice lines table header for multiple sessions -->
-            <xpath expr="//table[@name='invoice_line_table']//th[@name='th_subtotal']" position="before">
+            <xpath expr="//table[@name='invoice_line_table']//th[@name='th_quantity']" position="before">
                 <t t-set="session_lines_check" t-value="o.invoice_line_ids.filtered(lambda l: l.session_start or l.session_end)"/>
                 <th t-if="len(session_lines_check) &gt; 1" name="th_session_start" class="text-start">
                     <span>Start</span>
@@ -116,7 +117,7 @@
             </xpath>
 
             <!-- Add session columns to invoice lines table body for multiple sessions -->
-            <xpath expr="//table[@name='invoice_line_table']//td[@name='td_subtotal']" position="before">
+            <xpath expr="//table[@name='invoice_line_table']//td[@name='td_quantity']" position="before">
                 <t t-set="session_lines_check" t-value="o.invoice_line_ids.filtered(lambda l: l.session_start or l.session_end)"/>
                 <td t-if="len(session_lines_check) &gt; 1" name="td_session_start" class="text-start">
                     <span t-if="line.session_start" t-esc="line.session_start" t-options="{'widget': 'datetime', 'tz_name': 'Europe/Berlin', 'format': 'dd.MM.yyyy HH:mm'}"/>

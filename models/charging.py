@@ -2,17 +2,16 @@ import logging
 
 from odoo import models, fields, api, _
 from odoo.exceptions import UserError, ValidationError
-from odoo.tools import DEFAULT_SERVER_DATETIME_FORMAT
 
 _logger = logging.getLogger(__name__)
 
 
 class ChargingSessionInvoice(models.TransientModel):
     _name = 'charging.session.invoice'
-    _description = 'Charging Invoice Related to Ladeabrechnung'
+    _description = 'Charging Session Invoicing'
 
     @api.model
-    def generate(self, session_start, session_end, partner, lines_data, invoice_due_date=None, invoice_date=None):
+    def generate(self, partner, lines_data, invoice_due_date=None, invoice_date=None):
         """
         Generate a Sale Order with charging session lines and create a draft invoice.
 
@@ -40,20 +39,23 @@ class ChargingSessionInvoice(models.TransientModel):
 
         # Build order lines with session data
         order_lines = []
-        for data in lines_data:
+        if not lines_data:
+            raise ValidationError('No line items provided for invoicing.')
+
+        for line_item in lines_data:
             # Find product (but don't create or modify it)
-            product = self.sudo()._get_or_create_product(data)
+            product = self.sudo()._get_or_create_product(line_item)
 
             # Build the sale order line vals
-            qty = data.quantity
-            price_unit = data.price_unit
+            qty = line_item.quantity
             order_lines.append((0, 0, {
                 'product_id': product.id,
                 'product_uom_qty': qty,
                 'qty_delivered': qty,
-                'price_unit': price_unit,
-                'session_start': session_start,
-                'session_end': session_end,
+                'price_unit': line_item.price_unit,
+                'session_start': line_item.session_start,
+                'session_end': line_item.session_end,
+                'session_backend_ref': line_item.session_backend_ref,
                 'tax_id': [(6, 0, product.taxes_id.ids)],
             }))
 
@@ -62,6 +64,7 @@ class ChargingSessionInvoice(models.TransientModel):
             'partner_id': Partner.id,
             'order_line': order_lines,
             'date_order': invoice_date or fields.Datetime.now(),
+            'payment_term_id': self.env.ref('account.account_payment_term_30days').id or False,
         }
 
         sale_order = SaleOrder.create(order_vals)
@@ -71,10 +74,15 @@ class ChargingSessionInvoice(models.TransientModel):
         sale_order.action_confirm()
         _logger.info(f"Confirmed Sale Order {sale_order.name}")
 
-        # Create the invoice from the Sale Order
-        invoice = self._create_invoice_from_sale_order(sale_order, invoice_date, invoice_due_date)
+        # Create the invoice from the Sale Order if any line items' qty is more than zero
+        if (not sale_order.order_line or
+                all((line.product_uom_qty <= 0 and line.qty_delivered <= 0) for line in sale_order.order_line)):
+            raise ValidationError('Cannot create invoice: Sale Order has no lines with positive quantity.')
 
-        return invoice
+        invoice = self._create_invoice_from_sale_order(sale_order, invoice_date, invoice_due_date)
+        print(invoice)
+
+        return {"sale_order": {sale_order.id, sale_order.name}, "invoice": {invoice.id}}
 
     @api.model
     def _create_invoice_from_sale_order(self, sale_order, invoice_date=None, invoice_due_date=None):
@@ -83,8 +91,8 @@ class ChargingSessionInvoice(models.TransientModel):
 
         Args:
             sale_order: The confirmed sale.order record
-            invoice_date: Optional invoice date
-            invoice_due_date: Optional invoice due date
+            invoice_date: Optional invoice date, comes parsed
+            invoice_due_date: Optional invoice due date, comes parsed
 
         Returns:
             recordset: The created draft account.move record
@@ -96,16 +104,16 @@ class ChargingSessionInvoice(models.TransientModel):
         # Update invoice dates if provided
         invoice_vals = {}
         if invoice_date:
-            invoice_vals['invoice_date'] = invoice_date.strftime(
-                DEFAULT_SERVER_DATETIME_FORMAT) if hasattr(invoice_date, 'strftime') else invoice_date
+            invoice_vals['invoice_date'] = invoice_date
         if invoice_due_date:
-            invoice_vals['invoice_date_due'] = invoice_due_date.strftime(
-                DEFAULT_SERVER_DATETIME_FORMAT) if hasattr(invoice_due_date, 'strftime') else invoice_due_date
+            invoice_vals['invoice_date_due'] = invoice_due_date
         else:
             # Default: due in 1 month
             invoice_vals['invoice_date_due'] = fields.Date.add(fields.Date.today(), months=1)
 
         if invoice_vals:
+            invoice_vals['show_delivery_date'] = False
+            invoice_vals['delivery_date'] = False
             invoice.write(invoice_vals)
 
         _logger.info(f"Created draft invoice {invoice.name} from Sale Order {sale_order.name}")
@@ -137,6 +145,9 @@ class ChargingSessionInvoice(models.TransientModel):
         migrated_count = 0
         line_count = 0
 
+        # Get energy category
+        energy_category = self.env.ref('strohm_addon.uom_categ_energy', raise_if_not_found=False)
+
         for invoice in invoices_with_sessions:
             session_start = invoice.session_start
             session_end = invoice.session_end
@@ -144,19 +155,54 @@ class ChargingSessionInvoice(models.TransientModel):
             if not session_start and not session_end:
                 continue
 
-            # Update all invoice lines with the session data
-            for line in invoice.invoice_line_ids.filtered(lambda l: l.display_type == 'product'):
-                line.write({
-                    'session_start': session_start,
-                    'session_end': session_end,
-                })
+            # Filter lines that are products
+            product_lines = invoice.invoice_line_ids.filtered(lambda l: l.display_type == 'product')
+
+            # Check if there is exactly one energy line
+            energy_lines = product_lines
+            if energy_category:
+                energy_lines = product_lines.filtered(lambda l: l.product_uom_id.category_id == energy_category)
+
+            # Only proceed if we have exactly one energy line (or one product line if category not found)
+            # This prevents ambiguity if an invoice has multiple charging sessions mixed together
+            if len(energy_lines) != 1:
+                _logger.warning(
+                    f"Skipping migration for invoice {invoice.name}: Found {len(energy_lines)} energy lines, expected exactly 1.")
+                continue
+
+            # Update the single energy line with the session data
+            # We use SQL to avoid triggering the compute method on account.move which might wipe the header data
+            # before the line data is persisted.
+            line = energy_lines[0]
+
+            # Check if already migrated (skip if data exists)
+            if line.session_start or line.session_end:
+                continue
+
+            try:
+                self.env.cr.execute("""
+                                    UPDATE account_move_line
+                                    SET session_start = %s,
+                                        session_end   = %s
+                                    WHERE id = %s
+                                    """, (session_start or None, session_end or None, line.id))
+
+                # Force commit to ensure changes are persisted immediately
+                self.env.cr.commit()
+
+                # Invalidate cache for these fields on this line so Odoo sees the new values
+                line.invalidate_recordset(['session_start', 'session_end'])
+
                 line_count += 1
+                migrated_count += 1
+                _logger.info(f"Migrated session data for invoice {invoice.name} (Line ID: {line.id}): "
+                             f"start={session_start}, end={session_end}")
+            except Exception as e:
+                _logger.error(f"Failed to migrate invoice {invoice.name}: {e}")
+                # Rollback transaction on error to prevent partial updates or database locks
+                self.env.cr.rollback()
 
-            migrated_count += 1
-            _logger.info(f"Migrated session data for invoice {invoice.name}: "
-                        f"start={session_start}, end={session_end}")
-
-        _logger.info(f"Migration complete: {migrated_count} invoices, {line_count} lines updated")
+        _logger.info(f"Migration complete: {migrated_count} invoices migrated, {line_count} lines updated")
 
         return {
             'success': True,
@@ -224,7 +270,7 @@ class ChargingSessionInvoice(models.TransientModel):
 
                 # Try to find the German 19% VAT tax.
                 # First try with xmlid reference
-                tax = self.env.ref('l10n_de.tax_sale_19', raise_if_not_found=False)
+                tax = self.env.ref('l10n_de.tax_ust_19_skr04', raise_if_not_found=False)
 
                 # If that fails, search more broadly
                 if not tax:
@@ -252,7 +298,7 @@ class ChargingSessionInvoice(models.TransientModel):
                     'type': 'consu',
                     'uom_id': uom.id,
                     'uom_po_id': uom.id,
-                    'list_price': data.get('base_price', 0.3),
+                    'list_price': data.get('base_price', 0.35),
                     'invoice_policy': 'delivery',
                     # In Odoo, the tuple `(6, 0, ids)` is a special command used in many2many and one2many fields to set the field's value. Here:
                     #
@@ -316,7 +362,6 @@ class AccountMove(models.Model):
         store=True,
         help='Latest session end time from invoice lines'
     )
-
     total_kwh = fields.Float(
         string='Total Charged Energy (kWh)',
         compute='_compute_total_kwh',

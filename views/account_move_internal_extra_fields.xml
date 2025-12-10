@@ -27,11 +27,11 @@
 				<xpath expr="//field[@name='invoice_line_ids']//field[@name='quantity']" position="after">
 					<field name="session_start"
 					       string="Session Start"
-					       optional="hide"
+					       optional="show"
 					       widget="datetime"/>
 					<field name="session_end"
 					       string="Session End"
-					       optional="hide"
+					       optional="show"
 					       widget="datetime"/>
 				</xpath>
 			</field>

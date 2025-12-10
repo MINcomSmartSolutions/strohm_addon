@@ -667,7 +667,7 @@ class StrohmAPI(Controller):
             # Parse and validate request data with Pydantic
             try:
                 data = json.loads(request.httprequest.data)
-                validated_data = BillCreate(**data)
+                validated_data = BillCreate(**data) # it is validated, not sanitized
             except PydanticValidationError as e:
                 errors = e.errors()
                 error_msgs = [f"{err['loc'][0]}: {err['msg']}" for err in errors]
@@ -676,14 +676,12 @@ class StrohmAPI(Controller):
                 return request.make_json_response({'error': 'Invalid JSON'}, status=400)
 
             # Create the message that was used for the signature
-            message = f"{validated_data.timestamp}{validated_data.user_id}{validated_data.partner_id}{validated_data.session_start}{validated_data.session_end}{validated_data.key}{validated_data.key_salt}{validated_data.salt}"
-            if not self._validate_hash(validated_data.hash, message):
+            message = f"{data['timestamp']}{data['user_id']}{data['partner_id']}{data['key']}{data['key_salt']}{data['salt']}"
+            if not self._validate_hash(data['hash'], message):
                 return request.make_json_response({'error': 'Invalid signature'}, status=403)
 
             # Parse timestamps to datetime objects
-            session_start = datetime.strptime(validated_data.session_start, self.datetime_format)
-            session_end = datetime.strptime(validated_data.session_end, self.datetime_format)
-            timestamp_dt = datetime.strptime(validated_data.timestamp, self.datetime_format)
+            timestamp_dt = validated_data.parsed_timestamp()
 
             # Verify timestamp isn't too old (5-minute window)
             timestamp_unix = int(timestamp_dt.timestamp())
@@ -721,9 +719,8 @@ class StrohmAPI(Controller):
 
             _logger.debug(f"Using accounting user: {accounting_user.name} (ID: {accounting_user.id}) for bill creation")
 
-            bill = request.env['charging.session.invoice'].with_user(accounting_user).sudo().generate(
-                session_start,
-                session_end,
+            # sale order _ account move creation
+            so_am = request.env['charging.session.invoice'].with_user(accounting_user).sudo().generate(
                 Partner,
                 validated_data.lines_data,
                 validated_data.parsed_due_date(),
@@ -732,7 +729,7 @@ class StrohmAPI(Controller):
 
             return request.make_json_response({
                 'success': True,
-                'bill_id': bill.id,
+                'details': so_am,
                 'message': "Bill created successfully"
             }, status=201)
 
