@@ -18,6 +18,7 @@ class ChargingSessionInvoice(models.TransientModel):
         This method creates a Sale Order, confirms it, and generates a draft invoice.
         Session start/end times are stored on each line item, allowing multiple sessions per invoice.
         The invoice is left in draft state for review before posting.
+        For now every order should only have 1 charging session line.
 
         Args:
             session_start (Datetime): Session start datetime UTC
@@ -73,21 +74,41 @@ class ChargingSessionInvoice(models.TransientModel):
         # Confirm the Sale Order
         sale_order.action_confirm()
         _logger.info(f"Confirmed Sale Order {sale_order.name}")
+        details = {}
+
+        details.update({
+            "sale_order": {
+                'id': sale_order.id,
+                'name': sale_order.name,
+                'confirmed': True,
+                'total_amount': sale_order.amount_total,
+                'qty': sum(line.product_uom_qty for line in sale_order.order_line),
+                'line_count': len(sale_order.order_line),
+            },
+        })
 
         # Create the invoice from the Sale Order if any line items' qty is more than zero
         if (not sale_order.order_line or
                 all((line.product_uom_qty <= 0 and line.qty_delivered <= 0) for line in sale_order.order_line)):
-            raise ValidationError('Cannot create invoice: Sale Order has no lines with positive quantity.')
+            _logger.warning(f"Sale Order {sale_order} has no deliverable quantities, skipping invoice creation.")
+        else:
+            invoice = self._create_invoice_from_sale_order(sale_order, invoice_date, invoice_due_date)
+            details.update({
+                "invoice": {
+                    'id': invoice.id,
+                    'name': invoice.name,
+                    'state': invoice.state,
+                    'total_amount': invoice.amount_total,
+                },
+            })
+        print(details)
+        return details
 
-        invoice = self._create_invoice_from_sale_order(sale_order, invoice_date, invoice_due_date)
-        print(invoice)
-
-        return {"sale_order": {sale_order.id, sale_order.name}, "invoice": {invoice.id}}
 
     @api.model
     def _create_invoice_from_sale_order(self, sale_order, invoice_date=None, invoice_due_date=None):
         """
-        Create a draft invoice from a confirmed Sale Order.
+        Create a draft invoice from a confirmed Sa le Order.
 
         Args:
             sale_order: The confirmed sale.order record
@@ -116,7 +137,7 @@ class ChargingSessionInvoice(models.TransientModel):
             invoice_vals['delivery_date'] = False
             invoice.write(invoice_vals)
 
-        _logger.info(f"Created draft invoice {invoice.name} from Sale Order {sale_order.name}")
+        _logger.info(f"Created draft invoice {invoice.id} from Sale Order {sale_order.name}")
 
         return invoice
 

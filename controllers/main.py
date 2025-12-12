@@ -680,9 +680,7 @@ class StrohmAPI(Controller):
             if not self._validate_hash(data['hash'], message):
                 return request.make_json_response({'error': 'Invalid signature'}, status=403)
 
-            # Parse timestamps to datetime objects
             timestamp_dt = validated_data.parsed_timestamp()
-
             # Verify timestamp isn't too old (5-minute window)
             timestamp_unix = int(timestamp_dt.timestamp())
             if int(time.time()) - timestamp_unix > 300:
