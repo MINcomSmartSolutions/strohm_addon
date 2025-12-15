@@ -28,7 +28,7 @@ class BaseRequest(BaseModel):
     """Base schema with common fields for authentication and validation"""
     timestamp: str = Field(..., max_length=40)
     salt: str = Field(..., max_length=30)
-    hash: str
+    hash: str = Field(..., max_length=64)
 
     @field_validator('timestamp', mode='before')
     def validate_timestamp_format(cls, v, info):
@@ -54,8 +54,6 @@ class ApiKeyRotation(BaseRequest):
 
 class PaymentMethodCheck(BaseRequest):
     """Schema for payment method validation requests"""
-    user_id: int = Field(..., gt=0)
-    partner_id: int = Field(..., gt=0)
     key: str
     key_salt: str = Field(..., max_length=30)
 
@@ -102,10 +100,8 @@ class BillLineItem(BaseModel):
 class BillCreate(BaseRequest):
     """Schema for bill creation requests"""
     lines_data: List[BillLineItem]
-    key: str
+    key: str = Field(..., max_length=256)
     key_salt: str = Field(..., max_length=30)
-    user_id: int = Field(..., gt=0)
-    partner_id: int = Field(..., gt=0)
     due_date: Optional[str] = Field(None, max_length=30)
     invoice_date: Optional[str] = Field(None, max_length=30)
 

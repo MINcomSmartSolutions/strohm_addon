@@ -52,6 +52,28 @@ def strohm_init_parameters(env):
     except Exception as e:
         _logger.warning("Failed to disable portal API key generation: %s", e)
 
+    # Note: Mail servers remain active for controlled/manual email sending
+    # Automatic emails are disabled via config parameters below
+
+    # Disable sale order confirmation emails
+    try:
+        env['ir.config_parameter'].sudo().set_param('sale.auto_send_order_confirmation', 'False')
+        _logger.info("Disabled automatic sale order confirmation emails")
+    except Exception as e:
+        _logger.warning("Failed to disable sale order confirmation emails: %s", e)
+
+    # Deactivate scheduled email actions (mass mailings, etc.)
+    try:
+        scheduled_actions = env['ir.cron'].sudo().search([
+            '|', ('name', 'ilike', 'digest'),
+            ('model_id.model', 'in', ['mail.mail', 'mail.message', 'digest.digest'])
+        ])
+        if scheduled_actions:
+            scheduled_actions.write({'active': False})
+            _logger.info(f"Deactivated {len(scheduled_actions)} email-related scheduled actions")
+    except Exception as e:
+        _logger.warning("Failed to deactivate scheduled email actions: %s", e)
+
     # Set report.url to http://localhost:8069
     try:
         env['ir.config_parameter'].sudo().set_param('report.url', 'http://localhost:8069')

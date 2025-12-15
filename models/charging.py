@@ -71,11 +71,11 @@ class ChargingSessionInvoice(models.TransientModel):
         sale_order = SaleOrder.create(order_vals)
         _logger.info(f"Created Sale Order {sale_order.name} for partner {Partner.name}")
 
-        # Confirm the Sale Order
-        sale_order.action_confirm()
+        # Confirm the Sale Order without sending emails
+        sale_order.with_context(mail_notrack=True, mail_create_nosubscribe=True).action_confirm()
         _logger.info(f"Confirmed Sale Order {sale_order.name}")
-        details = {}
 
+        details = {}
         details.update({
             "sale_order": {
                 'id': sale_order.id,
@@ -101,14 +101,13 @@ class ChargingSessionInvoice(models.TransientModel):
                     'total_amount': invoice.amount_total,
                 },
             })
-        print(details)
         return details
 
 
     @api.model
     def _create_invoice_from_sale_order(self, sale_order, invoice_date=None, invoice_due_date=None):
         """
-        Create a draft invoice from a confirmed Sa le Order.
+        Create a draft invoice from a confirmed Sale Order.
 
         Args:
             sale_order: The confirmed sale.order record
