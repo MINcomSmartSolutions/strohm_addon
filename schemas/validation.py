@@ -28,7 +28,7 @@ class BaseRequest(BaseModel):
     """Base schema with common fields for authentication and validation"""
     timestamp: str = Field(..., max_length=40)
     salt: str = Field(..., max_length=30)
-    hash: str = Field(..., max_length=64)
+    hash: str = Field(..., max_length=64) # SHA-256 = 64 hex characters (used to transport) = 32 bytes
 
     @field_validator('timestamp', mode='before')
     def validate_timestamp_format(cls, v, info):
