@@ -115,38 +115,17 @@
                                     <t t-set="is_billed"
                                         t-value="any(i.state == 'posted' for i in invoices)" />
 
-                                    <t t-if="session.state == 'cancel'">
-                                        <span class="badge rounded-pill text-bg-danger">Cancelled</span>
-                                    </t>
-                                    <t t-elif="is_paid">
-                                        <span class="badge rounded-pill text-bg-success">Paid</span>
-                                    </t>
-                                    <t t-elif="is_billed">
-                                        <div class="badge small badge rounded-pill text-bg-info">
-                                            <i class="fa fa-fw fa-clock-o"></i> Billed - Waiting for
-                                            Payment </div>
-                                    </t>
-                                    <t t-else="">
-                                        <span class="badge rounded-pill text-bg-warning">Waiting for
-                                            Billing</span>
-                                    </t>
+                                    <span t-if="session.state == 'cancel'" class="badge rounded-pill text-bg-danger">Cancelled</span>
+                                    <span t-elif="is_paid" class="badge rounded-pill text-bg-success">Paid</span>
+                                    <span t-elif="is_billed" class="badge small rounded-pill text-bg-info"><i class="fa fa-fw fa-clock-o"/> Billed - Waiting for Payment</span>
+                                    <span t-else="" class="badge rounded-pill text-bg-warning"><i class="fa fa-fw fa-clock-o"/> Waiting for Billing</span>
                                 </t>
                                 <t t-else="">
                                     <!-- Account Move Status -->
-                                    <t t-if="session.state == 'cancel'">
-                                        <span class="badge rounded-pill text-bg-danger">Cancelled</span>
-                                    </t>
-                                    <t t-elif="session.payment_state in ['paid', 'in_payment']">
-                                        <span class="badge rounded-pill text-bg-success">Paid</span>
-                                    </t>
-                                    <t t-elif="session.state == 'posted'">
-                                        <div class="badge small badge rounded-pill text-bg-info"><i
-                                                class="fa fa-fw fa-clock-o"></i> Billed - Waiting
-                                            for Payment</div>
-                                    </t>
-                                    <t t-else="">
-                                        <span class="badge rounded-pill text-bg-secondary">Draft</span>
-                                    </t>
+                                    <span t-if="session.state == 'cancel'" class="badge rounded-pill text-bg-danger">Cancelled</span>
+                                    <span t-elif="session.payment_state in ['paid', 'in_payment']" class="badge rounded-pill text-bg-success">Paid</span>
+                                    <span t-elif="session.state == 'posted'" class="badge small rounded-pill text-bg-info"><i class="fa fa-fw fa-clock-o"/> Billed - Waiting for Payment</span>
+                                    <span t-else="" class="badge rounded-pill text-bg-secondary">Draft</span>
                                 </t>
                             </td>
                         </tr>
