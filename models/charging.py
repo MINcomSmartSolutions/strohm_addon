@@ -87,11 +87,19 @@ class ChargingSessionInvoice(models.TransientModel):
             },
         })
 
+        # Check partner's billing frequency to determine if we should invoice immediately
+        billing_frequency = Partner.billing_frequency or 'quarterly'
+
         # Create the invoice from the Sale Order if any line items' qty is more than zero
         if (not sale_order.order_line or
                 all((line.product_uom_qty <= 0 and line.qty_delivered <= 0) for line in sale_order.order_line)):
             _logger.warning(f"Sale Order {sale_order} has no deliverable quantities, skipping invoice creation.")
+        elif billing_frequency != 'session':
+            # For monthly/quarterly billing, skip immediate invoice creation
+            # The invoice will be created by the auto billing cron job
+            _logger.info(f"Partner {Partner.name} has {billing_frequency} billing, skipping immediate invoice creation for Sale Order {sale_order.name}")
         else:
+            # Per-session billing: create invoice immediately
             invoice = self._create_invoice_from_sale_order(sale_order, invoice_date, invoice_due_date)
             details.update({
                 "invoice": {

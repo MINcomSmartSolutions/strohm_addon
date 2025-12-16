@@ -1,0 +1,24 @@
+# -*- coding: utf-8 -*-
+import logging
+
+from odoo import models, fields
+
+_logger = logging.getLogger(__name__)
+
+
+class ResPartner(models.Model):
+    _inherit = 'res.partner'
+
+    billing_frequency = fields.Selection(
+        selection=[
+            ('session', 'Per Session'),
+            ('monthly', 'Monthly'),
+            ('quarterly', 'Quarterly'),
+        ],
+        string='Billing Frequency',
+        default='quarterly',
+        help='Determines how often invoices are generated for charging sessions. '
+             'Per Session: Invoice immediately after each session. '
+             'Monthly: Invoice on the 1st of each month. '
+             'Quarterly: Invoice on the 1st of Jan, Apr, Jul, Oct.'
+    )

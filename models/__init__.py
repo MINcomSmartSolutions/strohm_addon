@@ -6,4 +6,6 @@ from . import res_users_apikeys
 from . import charging
 from . import charging_session_line
 from . import res_users
+from . import res_partner
+from . import sale_order
 from . import partner_user_integrity
