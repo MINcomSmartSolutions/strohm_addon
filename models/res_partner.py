@@ -9,6 +9,9 @@ _logger = logging.getLogger(__name__)
 class ResPartner(models.Model):
     _inherit = 'res.partner'
 
+    def _get_gravatar_image(self, email):
+        return False
+
     billing_frequency = fields.Selection(
         selection=[
             ('session', 'Per Session'),
