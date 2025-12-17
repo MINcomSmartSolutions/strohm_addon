@@ -208,8 +208,8 @@ msgstr "Datum"
 
 #. module: strohm_addon
 #: model_terms:ir.ui.view,arch_db:strohm_addon.portal_my_sessions
-msgid "Price/kWh"
-msgstr "Preis/kWh"
+msgid "Unit Price"
+msgstr "Einzelpreis"
 
 #. module: strohm_addon
 #: model_terms:ir.ui.view,arch_db:strohm_addon.portal_my_sessions
@@ -228,18 +228,18 @@ msgstr "Storniert"
 
 #. module: strohm_addon
 #: model_terms:ir.ui.view,arch_db:strohm_addon.portal_my_sessions
-msgid "Paid"
-msgstr "Bezahlt"
+msgid "<i class=\"fa fa-fw fa-check\"/> Paid</span>"
+msgstr "<i class=\"fa fa-fw fa-check\"/> Bezahlt</span>"
 
 #. module: strohm_addon
 #: model_terms:ir.ui.view,arch_db:strohm_addon.portal_my_sessions
-msgid "Billed - Waiting for Payment"
-msgstr "Abgerechnet - Wartet auf Zahlung"
+msgid "<i class=\"fa fa-fw fa-clock-o\"/> Billed - Waiting for Payment"
+msgstr "<i class=\"fa fa-fw fa-clock-o\"/> Abgerechnet - Wartet auf Zahlung"
 
 #. module: strohm_addon
 #: model_terms:ir.ui.view,arch_db:strohm_addon.portal_my_sessions
-msgid "Waiting for Billing"
-msgstr "Wartet auf Abrechnung"
+msgid "<i class=\"fa fa-fw fa-clock-o\"/> Waiting for Billing"
+msgstr "<i class=\"fa fa-fw fa-clock-o\"/> Wartet auf Abrechnung"
 
 #. module: strohm_addon
 #: model_terms:ir.ui.view,arch_db:strohm_addon.portal_my_sessions

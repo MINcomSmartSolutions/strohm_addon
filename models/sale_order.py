@@ -69,10 +69,24 @@ class SaleOrder(models.Model):
                     _logger.debug(f"No orders to invoice for partner {partner.name} (ID: {partner.id})")
                     continue
 
-                _logger.info(f"Creating grouped invoice for partner {partner.name} with {len(orders)} orders")
+                # Filter orders to only include those with billable quantities (qty > 0)
+                billable_orders = orders.filtered(
+                    lambda o: any(
+                        line.product_uom_qty > 0 or line.qty_delivered > 0 
+                        for line in o.order_line
+                    )
+                )
 
-                # Create grouped invoice for all orders of this partner
-                invoices = orders._create_invoices(grouped=True)
+                if not billable_orders:
+                    _logger.debug(f"No billable orders (qty > 0) for partner {partner.name} (ID: {partner.id})")
+                    continue
+
+                _logger.info(f"Creating grouped invoice for partner {partner.name} with {len(billable_orders)} billable orders")
+
+                # Create consolidated invoice for all billable orders of this partner
+                # grouped=False means invoices are grouped by partner_id, currency_id (consolidated)
+                # grouped=True would create one invoice per sale order (not consolidated)
+                invoices = billable_orders._create_invoices(grouped=False)
 
                 if invoices:
                     # Set invoice dates
