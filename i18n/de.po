@@ -155,14 +155,14 @@ msgstr "Sek."
 #: code:addons/strohm_addon/controllers/portal.py:0
 #: model_terms:ir.ui.view,arch_db:strohm_addon.portal_my_orders_inherit
 msgid "Session End"
-msgstr "Sitzungsende"
+msgstr "Ende"
 
 #. module: strohm_addon
 #. odoo-python
 #: code:addons/strohm_addon/controllers/portal.py:0
 #: model_terms:ir.ui.view,arch_db:strohm_addon.portal_my_orders_inherit
 msgid "Session Start"
-msgstr "Sitzungsstart"
+msgstr "Beginn"
 
 #. module: strohm_addon
 #. odoo-python
@@ -228,8 +228,8 @@ msgstr "Storniert"
 
 #. module: strohm_addon
 #: model_terms:ir.ui.view,arch_db:strohm_addon.portal_my_sessions
-msgid "<i class=\"fa fa-fw fa-check\"/> Paid</span>"
-msgstr "<i class=\"fa fa-fw fa-check\"/> Bezahlt</span>"
+msgid "<i class=\"fa fa-fw fa-check\"/> Paid"
+msgstr "<i class=\"fa fa-fw fa-check\"/> Bezahlt"
 
 #. module: strohm_addon
 #: model_terms:ir.ui.view,arch_db:strohm_addon.portal_my_sessions
