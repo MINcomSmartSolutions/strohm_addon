@@ -6,7 +6,7 @@
         2. Company's Fiscal Localization should be set to Germany for invoicing.
         3. The module is designed to work with the Odoo Community Edition (CE) version 18.0.
     """,
-    'version': '18.0.1.0.15',
+    'version': '18.0.1.0.16',
     'category': 'Services',
     'author': 'MINcom Smart Solutions GmbH',
     'website': 'https://min2sol.com',
@@ -27,6 +27,7 @@
         'views/portal_assets.xml',
         'security/ir.model.access.csv',
         'data/user_automations.xml',
+        'data/invoice_sale_automations.xml',
         'data/partner_user_integrity_cron.xml',
         'data/billing_cron.xml',
         'data/disable_2fa.xml',
@@ -38,6 +39,7 @@
         'views/charging_invoice_simple.xml',
         'views/sale_order_internal_extra_fields.xml',
         'views/partner_internal_billing_frequency.xml',
+        'views/partner_actions.xml',
     ],
     'assets': {
         # Odoo website primary variables (colors, fonts, etc.)

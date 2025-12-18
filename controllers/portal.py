@@ -74,7 +74,7 @@ class CustomCustomerPortal(CustomerPortal):
             ('partner_id', '=', partner.id),
             ('move_type', '=', 'out_invoice'),
             ('session_start', '!=', False),
-            ('invoice_date', '<', '2025-12-09')
+            ('invoice_date', '<', '2025-12-18')
         ]
 
         searchbar_sortings = {
@@ -152,6 +152,9 @@ class CustomCustomerPortal(CustomerPortal):
         Returns:
             tuple: (has_active_sessions: bool, error_message: str or None, session_data: dict or None)
         """
+        if request.env.user.has_group('base.group_system'):
+            return (False, None, None)
+
         backend_service = get_backend_service()
 
         # Make API call to backend to check for active charging sessions
@@ -316,9 +319,7 @@ class CustomCustomerPortal(CustomerPortal):
                     portal_layout_values['has_active_charging_session'] = has_active_sessions
                     portal_layout_values['active_charging_session_data'] = session_data
 
-            # No need to active payment check for now.
-            # portal_layout_values['has_active_payment'] = request.env['payment.token'].sudo().search_count(
-            #     [('partner_id', '=', request.env.user.partner_id.id), ('active', '=', True)]) > 0
+
         except Exception as e:
             _logger.error("Error checking active payment tokens: %s", e)
             # portal_layout_values['has_active_payment'] = False

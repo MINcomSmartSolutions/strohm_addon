@@ -54,6 +54,12 @@ class SaleOrder(models.Model):
 
         _logger.info(f"Found {len(partners)} partners to process for auto invoicing")
 
+        invoices_created = self.process_partners_invoicing(partners)
+        _logger.info(f"Auto invoicing completed. Created {invoices_created} invoice(s)")
+        return True
+
+    @api.model
+    def process_partners_invoicing(self, partners):
         invoices_created = 0
 
         for partner in partners:
@@ -101,5 +107,4 @@ class SaleOrder(models.Model):
                 _logger.error(f"Error creating invoice for partner {partner.name} (ID: {partner.id}): {str(e)}", exc_info=True)
                 continue
 
-        _logger.info(f"Auto invoicing completed. Created {invoices_created} invoice(s)")
-        return True
+        return invoices_created

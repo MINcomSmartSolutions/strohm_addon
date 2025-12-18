@@ -25,3 +25,9 @@ class ResPartner(models.Model):
              'Monthly: Invoice on the 1st of each month. '
              'Quarterly: Invoice on the 1st of Jan, Apr, Jul, Oct.'
     )
+
+    def action_immediate_invoice(self):
+        """
+        Manually trigger invoicing for the selected partners, regardless of their billing frequency.
+        """
+        self.env['sale.order'].process_partners_invoicing(self)

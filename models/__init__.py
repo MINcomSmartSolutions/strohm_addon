@@ -9,3 +9,5 @@ from . import res_users
 from . import res_partner
 from . import sale_order
 from . import partner_user_integrity
+from . import invoice_sync
+from . import sale_order_sync

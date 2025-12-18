@@ -140,8 +140,6 @@ class ChargingSessionInvoice(models.TransientModel):
             invoice_vals['invoice_date_due'] = fields.Date.add(fields.Date.today(), months=1)
 
         if invoice_vals:
-            invoice_vals['show_delivery_date'] = False
-            invoice_vals['delivery_date'] = False
             invoice.write(invoice_vals)
 
         _logger.info(f"Created draft invoice {invoice.id} from Sale Order {sale_order.name}")
@@ -191,13 +189,6 @@ class ChargingSessionInvoice(models.TransientModel):
             if energy_category:
                 energy_lines = product_lines.filtered(lambda l: l.product_uom_id.category_id == energy_category)
 
-            # Only proceed if we have exactly one energy line (or one product line if category not found)
-            # This prevents ambiguity if an invoice has multiple charging sessions mixed together
-            if len(energy_lines) != 1:
-                _logger.warning(
-                    f"Skipping migration for invoice {invoice.name}: Found {len(energy_lines)} energy lines, expected exactly 1.")
-                continue
-
             # Update the single energy line with the session data
             # We use SQL to avoid triggering the compute method on account.move which might wipe the header data
             # before the line data is persisted.
@@ -205,6 +196,13 @@ class ChargingSessionInvoice(models.TransientModel):
 
             # Check if already migrated (skip if data exists)
             if line.session_start or line.session_end:
+                continue
+
+            # Only proceed if we have exactly one energy line (or one product line if category not found)
+            # This prevents ambiguity if an invoice has multiple charging sessions mixed together
+            if len(energy_lines) != 1:
+                _logger.warning(
+                    f"Skipping migration for invoice {invoice.name}: Found {len(energy_lines)} energy lines, expected exactly 1.")
                 continue
 
             try:
@@ -230,7 +228,11 @@ class ChargingSessionInvoice(models.TransientModel):
                 # Rollback transaction on error to prevent partial updates or database locks
                 self.env.cr.rollback()
 
-        _logger.info(f"Migration complete: {migrated_count} invoices migrated, {line_count} lines updated")
+        if (migrated_count > 0):
+            _logger.info(f"Migration complete: {migrated_count} invoices migrated, {line_count} lines updated")
+        else:
+            _logger.info("No invoices required migration.")
+
 
         return {
             'success': True,
