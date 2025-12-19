@@ -65,7 +65,7 @@ class ChargingSessionInvoice(models.TransientModel):
             'partner_id': Partner.id,
             'order_line': order_lines,
             'date_order': invoice_date or fields.Datetime.now(),
-            'payment_term_id': self.env.ref('account.account_payment_term_30days').id or False,
+            # 'payment_term_id': self.env.ref('account.account_payment_term_30days').id or False,
         }
 
         sale_order = SaleOrder.create(order_vals)

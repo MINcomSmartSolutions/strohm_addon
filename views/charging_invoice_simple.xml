@@ -3,6 +3,32 @@
     <data>
         <!-- Inherit the standard invoice document and add charging session info -->
         <template id="report_invoice_document_charging" inherit_id="account.report_invoice_document">
+            
+            <!-- Remove "Source" field from invoice header (Standard Odoo) -->
+            <xpath expr="//div[@t-if='o.invoice_origin']" position="replace"/>
+            
+            <!-- Remove "Delivery Date" field from invoice header (Standard Odoo) -->
+            <xpath expr="//div[@t-if='o.delivery_date']" position="replace"/>
+
+            <!-- Remove "Source" field from invoice header (DIN5008) -->
+            <xpath expr="//tr[@t-if='o.invoice_origin']" position="replace"/>
+
+            <!-- Remove "Delivery Date" field from invoice header (DIN5008) -->
+            <xpath expr="//tr[@t-if='o.delivery_date']" position="replace"/>
+            
+            <!-- Hide payment communication -->
+            <xpath expr="//p[@name='payment_communication']" position="replace"/>
+
+            <!-- Rename "Taxes" column header to "MwSt" -->
+            <xpath expr="//th[@name='th_taxes']/span" position="replace">
+                <span>MwSt</span>
+            </xpath>
+            
+            <!-- Remove "USt" from tax names in invoice lines -->
+            <xpath expr="//td[@name='td_taxes']/span[@id='line_tax_ids']" position="replace">
+                <span t-esc="', '.join(map(lambda x: (x.description or x.name).replace(' USt', '').replace('USt', '').strip(), line.tax_ids))"/>
+            </xpath>
+            
             <!-- Add charging session information after the information div -->
             <xpath expr="//div[@id='informations']" position="after">
                 <!-- Count lines with session data -->
@@ -108,25 +134,40 @@
             <!-- Add session columns to invoice lines table header for multiple sessions -->
             <xpath expr="//table[@name='invoice_line_table']//th[@name='th_quantity']" position="before">
                 <t t-set="session_lines_check" t-value="o.invoice_line_ids.filtered(lambda l: l.session_start or l.session_end)"/>
-                <th t-if="len(session_lines_check) &gt; 1" name="th_session_start" class="text-start">
+                <th t-if="len(session_lines_check) &gt; 1" name="th_session_start" class="text-start text-nowrap">
                     <span>Start</span>
                 </th>
-                <th t-if="len(session_lines_check) &gt; 1" name="th_session_end" class="text-start">
+                <th t-if="len(session_lines_check) &gt; 1" name="th_session_end" class="text-start text-nowrap">
                 <span>End</span>
                 </th>
+            </xpath>
+
+            <!-- Add horizontal line after table header -->
+            <xpath expr="//table[@name='invoice_line_table']/thead" position="after">
+                <tr style="border-bottom: 1px solid black;">
+                    <td colspan="100%" style="padding: 0; height: 1px;"></td>
+                </tr>
             </xpath>
 
             <!-- Add session columns to invoice lines table body for multiple sessions -->
             <xpath expr="//table[@name='invoice_line_table']//td[@name='td_quantity']" position="before">
                 <t t-set="session_lines_check" t-value="o.invoice_line_ids.filtered(lambda l: l.session_start or l.session_end)"/>
-                <td t-if="len(session_lines_check) &gt; 1" name="td_session_start" class="text-start">
+                <td t-if="len(session_lines_check) &gt; 1" name="td_session_start" class="text-start text-nowrap">
                     <span t-if="line.session_start" t-esc="line.session_start" t-options="{'widget': 'datetime', 'tz_name': 'Europe/Berlin', 'format': 'dd.MM.yyyy HH:mm'}"/>
                     <span t-else="" class="text-muted">-</span>
                 </td>
-                <td t-if="len(session_lines_check) &gt; 1" name="td_session_end" class="text-start">
+                <td t-if="len(session_lines_check) &gt; 1" name="td_session_end" class="text-start text-nowrap">
                     <span t-if="line.session_end" t-esc="line.session_end" t-options="{'widget': 'datetime', 'tz_name': 'Europe/Berlin', 'format': 'dd.MM.yyyy HH:mm'}"/>
                     <span t-else="" class="text-muted">-</span>
                 </td>
+            </xpath>
+        </template>
+        
+        <!-- Inherit the tax totals template to replace "USt" from tax group names -->
+        <template id="document_tax_totals_charging" inherit_id="account.document_tax_totals">
+            <!-- Replace "USt" from tax group names in subtotal section -->
+            <xpath expr="//span[@t-out=&quot;tax_group['group_name']&quot;]" position="attributes">
+                <attribute name="t-out">tax_group['group_name'].replace(' USt', ' Mehrwertsteuer').replace('USt', 'Mehrwertsteuer').strip() if tax_group.get('group_name') else ''</attribute>
             </xpath>
         </template>
     </data>

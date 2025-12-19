@@ -83,7 +83,7 @@
                                 <span t-else="" class="text-muted">-</span>
                             </td>
                             <td class="text-end d-none d-md-table-cell">
-                                <t t-if="session.total_kwh > 0">
+                                <t t-if="session.total_kwh >= 0">
                                     <span t-esc="'%.2f kWh' % session.total_kwh" />
                                 </t>
                                 <span t-else="" class="text-muted">-</span>

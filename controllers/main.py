@@ -593,7 +593,6 @@ class StrohmAPI(Controller):
                 return request.make_json_response({'error': 'Expired'}, status=403)
 
             # Decrypt API key
-            print(parameters)
             decrypted_key = self._decrypt_api_key(parameters['key'], parameters['key_salt']) # Directly from kw to avoid pydantic re-encoding issues
             _logger.debug(' User API key decrypted successfully')
 
