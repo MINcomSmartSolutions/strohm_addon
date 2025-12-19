@@ -20,23 +20,7 @@
                         <tr>
                             <td align="center">
                                 <table border="0" cellpadding="0" cellspacing="0"
-                                       style="max-width: 600px; width: 100%; background-color: white; overflow: hidden;color: #161616; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
-                                    <!-- Header -->
-                                    <tr>
-                                        <td style="padding: 30px;">
-                                            <table border="0" cellpadding="0" cellspacing="0" style="width: 100%;">
-                                                <tr>
-                                                    <td style="width: 100px; vertical-align: middle;">
-                                                        <t t-if="object.company_id.logo">
-                                                            <img t-att-src="image_data_uri(object.company_id.logo)"
-                                                                 style="max-width: 100px; height: auto;" alt="Logo"/>
-                                                        </t>
-                                                    </td>
-                                                </tr>
-                                            </table>
-                                        </td>
-                                    </tr>
-
+                                       style="max-width: 600px; background-color: white; overflow: hidden;color: #161616; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
                                     <!-- Body -->
                                     <tr>
                                         <td style="padding: 30px;">

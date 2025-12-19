@@ -1,0 +1,137 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- Add Sessions menu entry to Portal Home -->
+    <template id="portal_my_home_sessions" name="My Sessions" inherit_id="portal.portal_my_home"
+        priority="25" customize_show="True">
+        <div id="portal_client_category" position="inside">
+            <t t-call="portal.portal_docs_entry">
+                <t t-set="icon"
+                    t-value="'/strohm_addon/static/src/img/electric_car_24dp_434343_FILL1_wght400_GRAD0_opsz24.svg'" />
+                <t t-set="title">Charging Sessions</t>
+                <t t-set="url" t-value="'/my/sessions'" />
+                <t t-set="text">Show all charging sessions</t>
+                <t t-set="placeholder_count" t-value="'session_count'" />
+            </t>
+        </div>
+    </template>
+
+    <template id="portal_my_home_menu_session" name="Portal layout : session menu entries"
+        inherit_id="portal.portal_breadcrumbs" priority="20">
+        <xpath expr="//ol[hasclass('o_portal_submenu')]" position="inside">
+            <li t-if="page_name == 'session'" class="breadcrumb-item active">
+                Charging Sessions
+            </li>
+        </xpath>
+    </template>
+
+    <!-- Portal My Sessions - Charging Sessions List -->
+    <template id="portal_my_sessions" name="My Charging Sessions">
+        <t t-call="portal.portal_layout">
+            <t t-set="breadcrumbs_searchbar" t-value="True" />
+            <t t-set="title">Charging Sessions</t>
+            <t t-set="use_wide_container" t-value="True" />
+
+            <t t-call="portal.portal_searchbar">
+                <t t-set="title">Charging Sessions</t>
+            </t>
+
+            <t t-if="not sessions">
+                <div class="alert alert-warning" role="alert">
+                    <p class="mb-0">There are currently no charging sessions for your account.</p>
+                </div>
+            </t>
+
+            <t t-if="sessions" t-call="portal.portal_table">
+                <thead>
+                    <tr class="active">
+                        <th>Reference</th>
+                        <th class="text-end">Date</th>
+                        <th class="text-end d-none d-lg-table-cell">Session Start</th>
+                        <th class="text-end d-none d-lg-table-cell">Session End</th>
+                        <th class="text-end d-none d-md-table-cell">Charged Energy</th>
+                        <th class="text-end d-none d-md-table-cell">Unit Price</th>
+                        <th class="text-end">Total</th>
+                        <th class="text-center d-none d-md-table-cell">Status</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <t t-foreach="sessions" t-as="session">
+                        <tr>
+                            <td>
+                                <a t-att-href="session.get_portal_url()">
+                                    <t t-esc="session.name" />
+                                </a>
+                            </td>
+                            <td class="text-end">
+                                <t t-if="session._name == 'sale.order'">
+                                    <span t-field="session.date_order"
+                                        t-options='{"widget": "date"}' />
+                                </t>
+                                <t t-else="">
+                                    <span t-field="session.invoice_date"
+                                        t-options='{"widget": "date"}' />
+                                </t>
+                            </td>
+                            <td class="text-end d-none d-lg-table-cell">
+                                <span t-if="session.session_start" t-field="session.session_start"
+                                    t-options='{"widget": "datetime", "tz_name": "Europe/Berlin", "format": "dd.MM.yyyy HH:mm"}' />
+                                <span t-else="" class="text-muted">-</span>
+                            </td>
+                            <td class="text-end d-none d-lg-table-cell">
+                                <span t-if="session.session_end" t-field="session.session_end"
+                                    t-options='{"widget": "datetime", "tz_name": "Europe/Berlin", "format": "dd.MM.yyyy HH:mm"}' />
+                                <span t-else="" class="text-muted">-</span>
+                            </td>
+                            <td class="text-end d-none d-md-table-cell">
+                                <t t-if="session.total_kwh >= 0">
+                                    <span t-esc="'%.2f kWh' % session.total_kwh" />
+                                </t>
+                                <span t-else="" class="text-muted">-</span>
+                            </td>
+                            <td class="text-end d-none d-md-table-cell">
+                                <t t-if="session._name == 'sale.order'">
+                                    <t t-set="kwh_line"
+                                        t-value="session.sudo().order_line.filtered(lambda l: l.product_uom and l.product_uom.name == 'kWh')[:1]" />
+                                </t>
+                                <t t-else="">
+                                    <t t-set="kwh_line"
+                                        t-value="session.sudo().invoice_line_ids.filtered(lambda l: l.product_uom_id and l.product_uom_id.name == 'kWh')[:1]" />
+                                </t>
+
+                                <t t-if="kwh_line">
+                                    <span t-esc="'%.2f €/kWh' % kwh_line.price_unit" />
+                                </t>
+                                <span t-else="" class="text-muted">-</span>
+                            </td>
+                            <td class="text-end">
+                                <span t-field="session.amount_total" />
+                            </td>
+                            <td class="text-center d-none d-md-table-cell">
+                                <t t-if="session._name == 'sale.order'">
+                                    <t t-set="invoices"
+                                        t-value="session.invoice_ids.filtered(lambda i: i.state != 'cancel')" />
+                                    <t t-set="is_paid"
+                                        t-value="all(i.payment_state in ['paid', 'in_payment'] for i in invoices) if invoices else False" />
+                                    <t t-set="is_billed"
+                                        t-value="any(i.state == 'posted' for i in invoices)" />
+
+                                    <span t-if="session.state == 'cancel'" class="badge rounded-pill text-bg-danger">Cancelled</span>
+                                    <span t-elif="is_paid" class="badge small rounded-pill text-bg-success"><i class="fa fa-fw fa-check"/> Paid</span>
+                                    <span t-elif="is_billed" class="badge small rounded-pill text-bg-info"><i class="fa fa-fw fa-clock-o"/> Billed - Waiting for Payment</span>
+                                    <span t-else="" class="badge rounded-pill text-bg-warning"><i class="fa fa-fw fa-clock-o"/> Waiting for Billing</span>
+                                </t>
+                                <t t-else="">
+                                    <!-- Account Move Status -->
+                                    <span t-if="session.state == 'cancel'" class="badge rounded-pill text-bg-danger">Cancelled</span>
+                                    <span t-elif="session.payment_state in ['paid', 'in_payment']" class="badge rounded-pill text-bg-success"><i class="fa fa-fw fa-check"/> Paid</span>
+                                    <span t-elif="session.state == 'posted'" class="badge small rounded-pill text-bg-info"><i class="fa fa-fw fa-clock-o"/> Billed - Waiting for Payment</span>
+                                    <span t-else="" class="badge rounded-pill text-bg-secondary">Draft</span>
+                                </t>
+                            </td>
+                        </tr>
+                    </t>
+                </tbody>
+            </t>
+        </t>
+    </template>
+</odoo>

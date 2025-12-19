@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <data>
+        <!-- Add billing_frequency field to Partner form view -->
+        <record id="view_partner_form_billing_frequency" model="ir.ui.view">
+            <field name="name">res.partner.form.billing.frequency</field>
+            <field name="model">res.partner</field>
+            <field name="inherit_id" ref="base.view_partner_form"/>
+            <field name="arch" type="xml">
+                <!-- Add billing_frequency in the Accounting (Rechnungsstellung) tab -->
+                <xpath expr="//page[@name='accounting']//group[@name='accounting_entries']" position="after">
+                    <group name="billing_settings" string="Abrechnungseinstellungen">
+                        <field name="billing_frequency" 
+                               string="Rechnungshäufigkeit"
+                               help="Bestimmt, wie oft Rechnungen für Ladevorgänge erstellt werden"/>
+                    </group>
+                </xpath>
+            </field>
+        </record>
+    </data>
+</odoo>

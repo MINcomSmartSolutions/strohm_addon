@@ -22,7 +22,6 @@ def strohm_init_parameters(env):
     # Set default language and timezone context
     env.context = dict(env.context, lang='de_DE')
     env.context = dict(env.context, tz='Europe/Berlin')
-
     # Disable default digest emails
     try:
         env['ir.config_parameter'].sudo().set_param('digest.default_digest_emails', 'False')
@@ -52,6 +51,28 @@ def strohm_init_parameters(env):
         _logger.info("Successfully disabled portal API key generation")
     except Exception as e:
         _logger.warning("Failed to disable portal API key generation: %s", e)
+
+    # Note: Mail servers remain active for controlled/manual email sending
+    # Automatic emails are disabled via config parameters below
+
+    # Disable sale order confirmation emails
+    try:
+        env['ir.config_parameter'].sudo().set_param('sale.auto_send_order_confirmation', 'False')
+        _logger.info("Disabled automatic sale order confirmation emails")
+    except Exception as e:
+        _logger.warning("Failed to disable sale order confirmation emails: %s", e)
+
+    # Deactivate scheduled email actions (mass mailings, etc.)
+    try:
+        scheduled_actions = env['ir.cron'].sudo().search([
+            '|', ('name', 'ilike', 'digest'),
+            ('model_id.model', 'in', ['mail.mail', 'mail.message', 'digest.digest'])
+        ])
+        if scheduled_actions:
+            scheduled_actions.write({'active': False})
+            _logger.info(f"Deactivated {len(scheduled_actions)} email-related scheduled actions")
+    except Exception as e:
+        _logger.warning("Failed to deactivate scheduled email actions: %s", e)
 
     # Set report.url to http://localhost:8069
     try:
@@ -97,6 +118,13 @@ def strohm_init_parameters(env):
             _logger.warning("No company found in environment")
     except Exception as e:
         _logger.warning("Failed to check company fiscal country: %s", e)
+
+    # Migrate old invoice session data to lines to preserve it against recomputation
+    try:
+        _logger.info("Starting migration of old invoice session data to lines...")
+        env['charging.session.invoice'].sudo().migrate_invoice_sessions_to_lines()
+    except Exception as e:
+        _logger.warning("Failed to migrate invoice session data: %s", e)
 
 
 def ensure_standard_products(env):

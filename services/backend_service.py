@@ -34,7 +34,7 @@ class BackendService:
     def _get_external_url(self) -> Optional[str]:
         """Get external backend URL for client-facing operations."""
         if not self.external_url:
-            _logger.warning("BACKEND_EXTERNAL_URL not configured")
+            _logger.error("BACKEND_EXTERNAL_URL not configured")
             return ""
         return self.external_url
 
@@ -81,20 +81,42 @@ class BackendService:
         headers: Optional[Dict[str, str]] = None,
         timeout: Optional[int] = None
     ) -> Tuple[bool, Optional[Dict], Optional[str]]:
-        """
-        Make POST request to internal backend API.
-
-        Args:
-            endpoint: API endpoint path (e.g., '/internal/user/sync')
-            data: Request payload
-            headers: Optional custom headers (merged with defaults)
-            timeout: Request timeout in seconds (uses default if not specified)
-
-        Returns:
-            Tuple of (success: bool, response_data: dict or None, error_message: str or None)
-        """
+        """Make POST request to internal backend API."""
         url = f"{self._get_internal_url()}{endpoint}"
-        return self._execute_post(url, data, headers, timeout)
+        return self._execute_request('POST', url, data=data, headers=headers, timeout=timeout)
+
+    def put_internal(
+        self,
+        endpoint: str,
+        data: Dict[str, Any],
+        headers: Optional[Dict[str, str]] = None,
+        timeout: Optional[int] = None
+    ) -> Tuple[bool, Optional[Dict], Optional[str]]:
+        """Make PUT request to internal backend API."""
+        url = f"{self._get_internal_url()}{endpoint}"
+        return self._execute_request('PUT', url, data=data, headers=headers, timeout=timeout)
+
+    def patch_internal(
+        self,
+        endpoint: str,
+        data: Dict[str, Any],
+        headers: Optional[Dict[str, str]] = None,
+        timeout: Optional[int] = None
+    ) -> Tuple[bool, Optional[Dict], Optional[str]]:
+        """Make PATCH request to internal backend API."""
+        url = f"{self._get_internal_url()}{endpoint}"
+        return self._execute_request('PATCH', url, data=data, headers=headers, timeout=timeout)
+
+    def delete_internal(
+        self,
+        endpoint: str,
+        data: Optional[Dict[str, Any]] = None,
+        headers: Optional[Dict[str, str]] = None,
+        timeout: Optional[int] = None
+    ) -> Tuple[bool, Optional[Dict], Optional[str]]:
+        """Make DELETE request to internal backend API."""
+        url = f"{self._get_internal_url()}{endpoint}"
+        return self._execute_request('DELETE', url, data=data, headers=headers, timeout=timeout)
 
     def post_external(
         self,
@@ -103,24 +125,13 @@ class BackendService:
         headers: Optional[Dict[str, str]] = None,
         timeout: Optional[int] = None
     ) -> Tuple[bool, Optional[Dict], Optional[str]]:
-        """
-        Make POST request to external backend API.
-
-        Args:
-            endpoint: API endpoint path
-            data: Request payload
-            headers: Optional custom headers (merged with defaults)
-            timeout: Request timeout in seconds (uses default if not specified)
-
-        Returns:
-            Tuple of (success: bool, response_data: dict or None, error_message: str or None)
-        """
+        """Make POST request to external backend API."""
         external_url = self._get_external_url()
         if not external_url:
             return (False, None, "BACKEND_EXTERNAL_URL not configured")
 
         url = f"{external_url}{endpoint}"
-        return self._execute_post(url, data, headers, timeout)
+        return self._execute_request('POST', url, data=data, headers=headers, timeout=timeout)
 
     def get_external(
         self,
@@ -129,24 +140,13 @@ class BackendService:
         headers: Optional[Dict[str, str]] = None,
         timeout: Optional[int] = None
     ) -> Tuple[bool, Optional[Dict], Optional[str]]:
-        """
-        Make GET request to external backend API.
-
-        Args:
-            endpoint: API endpoint path
-            params: Optional query parameters
-            headers: Optional custom headers (merged with defaults)
-            timeout: Request timeout in seconds (uses default if not specified)
-
-        Returns:
-            Tuple of (success: bool, response_data: dict or None, error_message: str or None)
-        """
+        """Make GET request to external backend API."""
         external_url = self._get_external_url()
         if not external_url:
             return (False, None, "BACKEND_EXTERNAL_URL not configured")
 
         url = f"{external_url}{endpoint}"
-        return self._execute_get(url, params, headers, timeout)
+        return self._execute_request('GET', url, params=params, headers=headers, timeout=timeout)
 
     def get_internal(
         self,
@@ -155,20 +155,9 @@ class BackendService:
         headers: Optional[Dict[str, str]] = None,
         timeout: Optional[int] = None
     ) -> Tuple[bool, Optional[Dict], Optional[str]]:
-        """
-        Make GET request to internal backend API.
-
-        Args:
-            endpoint: API endpoint path
-            params: Optional query parameters
-            headers: Optional custom headers (merged with defaults)
-            timeout: Request timeout in seconds (uses default if not specified)
-
-        Returns:
-            Tuple of (success: bool, response_data: dict or None, error_message: str or None)
-        """
+        """Make GET request to internal backend API."""
         url = f"{self._get_internal_url()}{endpoint}"
-        return self._execute_get(url, params, headers, timeout)
+        return self._execute_request('GET', url, params=params, headers=headers, timeout=timeout)
 
     def _execute_post(
         self,
@@ -177,62 +166,8 @@ class BackendService:
         headers: Optional[Dict[str, str]] = None,
         timeout: Optional[int] = None
     ) -> Tuple[bool, Optional[Dict], Optional[str]]:
-        """Execute POST request with error handling and logging."""
-        # Set timeout first
-        request_timeout = timeout if timeout is not None else self.default_timeout
-
-        try:
-            # Merge headers
-            request_headers = self._get_default_headers()
-            if headers:
-                request_headers.update(headers)
-
-            # Serialize data
-            serialized_data = self._make_json_serializable(data)
-
-
-            _logger.info(f"POST request to: {url}")
-            _logger.debug(f"Request payload: {serialized_data}")
-
-            response = requests.post(
-                url,
-                headers=request_headers,
-                data=json.dumps(serialized_data),
-                timeout=request_timeout
-            )
-
-            _logger.info(f"Response status: {response.status_code}")
-
-            # Handle successful responses
-            if response.status_code in (200, 201, 202):
-                try:
-                    response_data = response.json()
-                    return (True, response_data, None)
-                except json.JSONDecodeError:
-                    # Success but no JSON body
-                    return (True, None, None)
-
-            # Handle error responses
-            error_msg = f"Backend returned status {response.status_code}: {response.text}"
-            _logger.error(error_msg)
-            return (False, None, error_msg)
-
-        except requests.exceptions.Timeout:
-            error_msg = f"Request timeout after {request_timeout}s: {url}"
-            _logger.error(error_msg)
-            return (False, None, error_msg)
-        except requests.exceptions.ConnectionError as e:
-            error_msg = f"Connection error: {str(e)}"
-            _logger.error(error_msg)
-            return (False, None, error_msg)
-        except requests.exceptions.RequestException as e:
-            error_msg = f"Request error: {str(e)}"
-            _logger.error(error_msg)
-            return (False, None, error_msg)
-        except Exception as e:
-            error_msg = f"Unexpected error: {str(e)}"
-            _logger.exception(error_msg)
-            return (False, None, error_msg)
+        """Deprecated: Use _execute_request instead."""
+        return self._execute_request('POST', url, data=data, headers=headers, timeout=timeout)
 
     def _execute_get(
         self,
@@ -241,7 +176,19 @@ class BackendService:
         headers: Optional[Dict[str, str]] = None,
         timeout: Optional[int] = None
     ) -> Tuple[bool, Optional[Dict], Optional[str]]:
-        """Execute GET request with error handling and logging."""
+        """Deprecated: Use _execute_request instead."""
+        return self._execute_request('GET', url, params=params, headers=headers, timeout=timeout)
+
+    def _execute_request(
+        self,
+        method: str,
+        url: str,
+        data: Optional[Dict[str, Any]] = None,
+        params: Optional[Dict[str, Any]] = None,
+        headers: Optional[Dict[str, str]] = None,
+        timeout: Optional[int] = None
+    ) -> Tuple[bool, Optional[Dict], Optional[str]]:
+        """Execute HTTP request with error handling and logging."""
         # Set timeout first
         request_timeout = timeout if timeout is not None else self.default_timeout
 
@@ -251,13 +198,21 @@ class BackendService:
             if headers:
                 request_headers.update(headers)
 
-            _logger.info(f"GET request to: {url}")
+            _logger.info(f"{method} request to: {url}")
+            
+            serialized_data = None
+            if data is not None:
+                serialized_data = self._make_json_serializable(data)
+                _logger.debug(f"Request payload: {serialized_data}")
+            
             if params:
                 _logger.debug(f"Query params: {params}")
 
-            response = requests.get(
-                url,
+            response = requests.request(
+                method=method,
+                url=url,
                 headers=request_headers,
+                data=json.dumps(serialized_data) if serialized_data is not None else None,
                 params=params,
                 timeout=request_timeout
             )
@@ -265,15 +220,17 @@ class BackendService:
             _logger.info(f"Response status: {response.status_code}")
 
             # Handle successful responses
-            if response.status_code == 200:
+            if response.status_code in (200, 201, 202, 204):
                 try:
-                    response_data = response.json()
-                    return (True, response_data, None)
+                    if response.content:
+                        response_data = response.json()
+                        return (True, response_data, None)
+                    return (True, None, None)
                 except json.JSONDecodeError:
                     # Success but no JSON body
                     return (True, None, None)
-            elif response.status_code == 404:
-                # Treat 404 as valid response for existence checks
+            elif response.status_code == 404 and method == 'GET':
+                # Treat 404 as valid response for existence checks on GET
                 _logger.info(f"Resource not found (404): {url}")
                 return (True, {'exists': False}, None)
 

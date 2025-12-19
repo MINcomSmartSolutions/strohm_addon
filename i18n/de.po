@@ -14,10 +14,15 @@ msgid "There are currently no active payment methods for your account."
 msgstr "Derzeit sind keine aktiven Zahlungsmethoden für Ihr Konto verfügbar."
 
 #. module: strohm_addon
+#. odoo-python
+#: code:addons/strohm_addon/controllers/portal.py:0
 msgid "You are not allowed to delete your account when you have open bills or open charging sessions."
 msgstr "Sie dürfen Ihr Konto nicht löschen, wenn Sie offene Rechnungen oder offene Ladesitzungen haben."
 
 #. module: strohm_addon
+#: model_terms:ir.ui.view,arch_db:strohm_addon.portal_my_home_sessions
+#: model_terms:ir.ui.view,arch_db:strohm_addon.portal_my_home_menu_session
+#: model_terms:ir.ui.view,arch_db:strohm_addon.portal_my_sessions
 #: model_terms:ir.ui.view,arch_db:strohm_addon.portal_charging_session_lines
 msgid "Charging Sessions"
 msgstr "Ladesitzungen"
@@ -58,26 +63,268 @@ msgid "ct/kWh"
 msgstr "ct/kWh"
 
 #. module: strohm_addon
-#: model_terms:ir.ui.view,arch_db:strohm_addon.portal_my_invoices_inherit
+#. odoo-python
+#: code:addons/strohm_addon/controllers/portal.py:0
+#: model_terms:ir.ui.view,arch_db:strohm_addon.portal_my_orders_inherit
+#: model_terms:ir.ui.view,arch_db:strohm_addon.portal_my_sessions
 msgid "Session Start"
 msgstr "Beginn der Ladesitzung"
 
 #. module: strohm_addon
-#: model_terms:ir.ui.view,arch_db:strohm_addon.portal_my_invoices_inherit
+#. odoo-python
+#: code:addons/strohm_addon/controllers/portal.py:0
+#: model_terms:ir.ui.view,arch_db:strohm_addon.portal_my_orders_inherit
+#: model_terms:ir.ui.view,arch_db:strohm_addon.portal_my_sessions
 msgid "Session End"
 msgstr "Ende der Ladesitzung"
 
 #. module: strohm_addon
-#: model_terms:ir.ui.view,arch_db:strohm_addon.portal_my_invoices_inherit
-msgid "Charged Energy (kWh)"
-msgstr "Geladene Energie (kWh)"
+#: model_terms:ir.ui.view,arch_db:strohm_addon.portal_my_orders_inherit
+#: model_terms:ir.ui.view,arch_db:strohm_addon.portal_my_sessions
+msgid "Charged Energy"
+msgstr "Geladene Energie"
 
 #. module: strohm_addon
-#: model_terms:ir.ui.view,arch_db:strohm_addon.portal_my_invoices_inherit
+#: model_terms:ir.ui.view,arch_db:strohm_addon.portal_my_orders_inherit
+#: model_terms:ir.ui.view,arch_db:strohm_addon.portal_my_sessions
 msgid "Price per kWh"
 msgstr "Preis pro kWh"
 
+#. module: strohm_addon
+#: model_terms:ir.ui.view,arch_db:strohm_addon.report_invoice_document_charging
+msgid "Charging Session Details"
+msgstr "Ladesitzungsdetails"
 
+#. module: strohm_addon
+#: model_terms:ir.ui.view,arch_db:strohm_addon.report_invoice_document_charging
+msgid "<strong>Session Start</strong><br/>"
+msgstr "<strong>Beginn der Ladesitzung</strong><br/>"
 
+#. module: strohm_addon
+#: model_terms:ir.ui.view,arch_db:strohm_addon.report_invoice_document_charging
+msgid "<strong>Session End</strong><br/>"
+msgstr "<strong>Ende der Ladesitzung</strong><br/>"
+
+#. module: strohm_addon
+#: model_terms:ir.ui.view,arch_db:strohm_addon.report_invoice_document_charging
+msgid "<strong>Charged Energy</strong><br/>"
+msgstr "<strong>Geladene Energie</strong><br/>"
+
+#. module: strohm_addon
+#: model_terms:ir.ui.view,arch_db:strohm_addon.report_invoice_document_charging
+msgid "<strong>Charging Duration</strong><br/>"
+msgstr "<strong>Ladedauer</strong><br/>"
+
+#. module: strohm_addon
+#: model_terms:ir.ui.view,arch_db:strohm_addon.report_invoice_document_charging
+msgid "<strong>Average Power</strong><br/>"
+msgstr "<strong>Durchschnittliche Leistung</strong><br/>"
+
+#. module: strohm_addon
+#: model_terms:ir.ui.view,arch_db:strohm_addon.report_invoice_document_charging
+msgid "Source"
+msgstr "Verweis"
+
+#. module: strohm_addon
+#: model_terms:ir.ui.view,arch_db:strohm_addon.report_invoice_document_charging
+msgid "<span>Start</span>"
+msgstr "<span>Beginn</span>"
+
+#. module: strohm_addon
+#: model_terms:ir.ui.view,arch_db:strohm_addon.report_invoice_document_charging
+msgid "<span>End</span>"
+msgstr "<span>Ende</span>"
+
+#. module: strohm_addon
+#: model_terms:ir.ui.view,arch_db:strohm_addon.report_invoice_document_charging
+msgid "h"
+msgstr "Std."
+
+#. module: strohm_addon
+#: model_terms:ir.ui.view,arch_db:strohm_addon.report_invoice_document_charging
+msgid "min"
+msgstr "Min."
+
+#. module: strohm_addon
+#: model_terms:ir.ui.view,arch_db:strohm_addon.report_invoice_document_charging
+msgid "sec"
+msgstr "Sek."
+
+#. module: strohm_addon
+#. odoo-python
+#: code:addons/strohm_addon/controllers/portal.py:0
+#: model_terms:ir.ui.view,arch_db:strohm_addon.portal_my_orders_inherit
+msgid "Session End"
+msgstr "Ende"
+
+#. module: strohm_addon
+#. odoo-python
+#: code:addons/strohm_addon/controllers/portal.py:0
+#: model_terms:ir.ui.view,arch_db:strohm_addon.portal_my_orders_inherit
+msgid "Session Start"
+msgstr "Beginn"
+
+#. module: strohm_addon
+#. odoo-python
+#: code:addons/strohm_addon/controllers/portal.py:0
+msgid "Reference"
+msgstr "Referenz"
+
+#. module: strohm_addon
+#. odoo-python
+#: code:addons/strohm_addon/controllers/portal.py:0
+msgid "Charging Date"
+msgstr "Datum"
+
+#. module: strohm_addon
+#: model_terms:ir.ui.view,arch_db:strohm_addon.portal_my_home_sessions
+msgid "My Sessions"
+msgstr "Meine Ladesitzungen"
+
+#. module: strohm_addon
+#: model_terms:ir.ui.view,arch_db:strohm_addon.portal_my_home_sessions
+msgid "Show all charging sessions"
+msgstr "Alle Ladesitzungen anzeigen"
+
+#. module: strohm_addon
+#: model_terms:ir.ui.view,arch_db:strohm_addon.portal_my_sessions
+msgid "My Charging Sessions"
+msgstr "Meine Ladesitzungen"
+
+#. module: strohm_addon
+#: model_terms:ir.ui.view,arch_db:strohm_addon.portal_my_sessions
+msgid "There are currently no charging sessions for your account."
+msgstr "Es sind derzeit keine Ladesitzungen für Ihr Konto vorhanden."
+
+#. module: strohm_addon
+#: model_terms:ir.ui.view,arch_db:strohm_addon.portal_my_sessions
+msgid "Reference"
+msgstr "Referenz"
+
+#. module: strohm_addon
+#: model_terms:ir.ui.view,arch_db:strohm_addon.portal_my_sessions
+msgid "Date"
+msgstr "Datum"
+
+#. module: strohm_addon
+#: model_terms:ir.ui.view,arch_db:strohm_addon.portal_my_sessions
+msgid "Unit Price"
+msgstr "Einzelpreis"
+
+#. module: strohm_addon
+#: model_terms:ir.ui.view,arch_db:strohm_addon.portal_my_sessions
+msgid "Total"
+msgstr "Gesamt"
+
+#. module: strohm_addon
+#: model_terms:ir.ui.view,arch_db:strohm_addon.portal_my_sessions
+msgid "Status"
+msgstr "Status"
+
+#. module: strohm_addon
+#: model_terms:ir.ui.view,arch_db:strohm_addon.portal_my_sessions
+msgid "Cancelled"
+msgstr "Storniert"
+
+#. module: strohm_addon
+#: model_terms:ir.ui.view,arch_db:strohm_addon.portal_my_sessions
+msgid "<i class=\"fa fa-fw fa-check\"/> Paid"
+msgstr "<i class=\"fa fa-fw fa-check\"/> Bezahlt"
+
+#. module: strohm_addon
+#: model_terms:ir.ui.view,arch_db:strohm_addon.portal_my_sessions
+msgid "<i class=\"fa fa-fw fa-clock-o\"/> Billed - Waiting for Payment"
+msgstr "<i class=\"fa fa-fw fa-clock-o\"/> Abgerechnet - Wartet auf Zahlung"
+
+#. module: strohm_addon
+#: model_terms:ir.ui.view,arch_db:strohm_addon.portal_my_sessions
+msgid "<i class=\"fa fa-fw fa-clock-o\"/> Waiting for Billing"
+msgstr "<i class=\"fa fa-fw fa-clock-o\"/> Wartet auf Abrechnung"
+
+#. module: strohm_addon
+#: model_terms:ir.ui.view,arch_db:strohm_addon.portal_my_sessions
+msgid "Draft"
+msgstr "Entwurf"
+
+#. module: strohm_addon
+#: model_terms:ir.ui.view,arch_db:strohm_addon.custom_portal_layout_title
+msgid "Portal - HM Laden"
+msgstr "Portal - HM Laden"
+
+#. module: strohm_addon
+#: model_terms:ir.ui.view,arch_db:strohm_addon.custom_sec
+msgid "HM Laden - Security"
+msgstr "HM Laden - Sicherheit"
+
+#. module: strohm_addon
+#: model_terms:ir.ui.view,arch_db:strohm_addon.custom_sec
+msgid "You cannot delete your account if you have open invoices or active charging sessions."
+msgstr "Sie dürfen Ihr Konto nicht löschen, wenn Sie offene Rechnungen oder laufende Ladesitzungen haben."
+
+#. module: strohm_addon
+#: model_terms:ir.ui.view,arch_db:strohm_addon.custom_sec
+msgid "For information on data deletion policies, please refer to the <a href=\"https://backend.laden.hm.edu/faq\">FAQ</a>."
+msgstr "Informationen zu den Richtlinien für die Datenlöschung finden Sie in den <a href=\"https://backend.laden.hm.edu/faq\">FAQ</a>."
+
+#. module: strohm_addon
+#: model_terms:ir.ui.view,arch_db:strohm_addon.custom_payment_methods_title
+msgid "HM Laden - Payment Methods"
+msgstr "HM Laden - Zahlungsmethoden"
+
+#. module: strohm_addon
+#: model_terms:ir.ui.view,arch_db:strohm_addon.portal_current_electricity_price
+msgid "cent per kWh"
+msgstr "cent pro kWh"
+
+#. module: strohm_addon
+#: model_terms:ir.ui.view,arch_db:strohm_addon.portal_active_charging_session_notice
+msgid "Day"
+msgstr "Tag"
+
+#. module: strohm_addon
+#: model_terms:ir.ui.view,arch_db:strohm_addon.portal_active_charging_session_notice
+msgid "Days"
+msgstr "Tage"
+
+#. module: strohm_addon
+#. odoo-python
+#: code:addons/strohm_addon/controllers/portal.py:0
+msgid "The validation does not match your email."
+msgstr "Die Validierung stimmt nicht mit Ihrer E-Mail überein."
+
+#. module: strohm_addon
+#. odoo-python
+#: code:addons/strohm_addon/controllers/portal.py:0
+msgid "The account cannot be deactivated. You have %s open invoice(s) that must be paid first."
+msgstr "Das Konto kann nicht deaktiviert werden. Sie haben %s offene Rechnung(en), die zuerst beglichen werden müssen."
+
+#. module: strohm_addon
+#. odoo-python
+#: code:addons/strohm_addon/controllers/portal.py:0
+msgid "The account cannot be deactivated. You have active charging session(s) that must be ended first."
+msgstr "Das Konto kann nicht deaktiviert werden. Sie haben aktive Ladesitzung(en), die zuerst beendet werden müssen."
+
+#. module: strohm_addon
+#: code:addons/strohm_addon/controllers/portal.py:0
+msgid "The account cannot be deactivated at this time. Please try again later."
+msgstr "Das Konto kann derzeit nicht deaktiviert werden. Bitte versuchen Sie es später erneut."
+
+#. module: strohm_addon
+#. odoo-python
+#: code:addons/strohm_addon/controllers/portal.py:0
+msgid "Account deleted!"
+msgstr "Konto gelöscht!"
+
+#. module: strohm_addon
+#. odoo-python
+#: code:addons/strohm_addon/controllers/portal.py:0
+msgid "All devices have been revoked successfully."
+msgstr "Alle Geräte wurden erfolgreich widerrufen."
+
+#. module: strohm_addon
+#. odoo-python
+#: code:addons/strohm_addon/controllers/portal.py:0
+msgid "An error occurred while revoking devices."
+msgstr "Beim Widerrufen der Geräte ist ein Fehler aufgetreten."
 
 

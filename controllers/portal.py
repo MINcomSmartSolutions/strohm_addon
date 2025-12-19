@@ -7,7 +7,7 @@ from werkzeug import urls
 from werkzeug.utils import redirect
 
 from odoo import _
-from odoo.addons.portal.controllers.portal import CustomerPortal, get_error
+from odoo.addons.portal.controllers.portal import CustomerPortal, get_error, pager as portal_pager
 from odoo.http import request
 from odoo.http import route
 from ..services.backend_service import get_backend_service
@@ -18,9 +18,132 @@ _logger = logging.getLogger(__name__)
 class CustomCustomerPortal(CustomerPortal):
     """Extend the CustomerPortal class to add custom routes."""
 
+    def _prepare_home_portal_values(self, counters):
+        """Add session_count to portal home counters."""
+        values = super()._prepare_home_portal_values(counters)
+        # Always calculate session_count to ensure it appears in the portal
+        if 'session_count' in counters:
+            partner = request.env.user.partner_id
+            SaleOrder = request.env['sale.order']
+            AccountMove = request.env['account.move']
+            
+            so_count = SaleOrder.search_count([
+                ('partner_id', '=', partner.id),
+                ('session_start', '!=', False),
+                ('session_end', '!=', False),
+            ])
+            
+            # Count invoices that are NOT linked to sales (approximate for count)
+            # We can't easily filter 'not linked' in search_count without a complex domain or join
+            # For performance, we might just count all before the date, or accept a slight inaccuracy in the badge
+            # But let's try to be accurate if possible.
+            # Since we can't do a negative join in search_count easily, we'll fetch ids.
+            am_domain = [
+                ('partner_id', '=', partner.id),
+                ('move_type', '=', 'out_invoice'),
+                ('session_start', '!=', False),
+                ('invoice_date', '<', '2025-12-09')
+            ]
+            invoices = AccountMove.search(am_domain)
+            # Filter out invoices linked to sales
+            invoices = invoices.filtered(lambda m: not m.invoice_line_ids.sale_line_ids)
+            
+            values['session_count'] = so_count + len(invoices)
+        return values
+
+    @route(['/my/sessions', '/my/sessions/page/<int:page>'], type='http', auth='user', website=True)
+    def portal_my_sessions(self, page=1, date_begin=None, date_end=None, sortby=None, **kw):
+        """
+        Portal route to display charging sessions list.
+        Sessions are sale.order records with session_start field set,
+        AND account.move records (invoices) before 09.12.2025 with session_start set,
+        excluding invoices that are already linked to sale orders.
+        """
+        values = self._prepare_portal_layout_values()
+        SaleOrder = request.env['sale.order']
+        AccountMove = request.env['account.move']
+        partner = request.env.user.partner_id
+
+        # Domains
+        so_domain = [
+            ('partner_id', '=', partner.id),
+            ('session_start', '!=', False)
+        ]
+        
+        am_domain = [
+            ('partner_id', '=', partner.id),
+            ('move_type', '=', 'out_invoice'),
+            ('session_start', '!=', False),
+            ('invoice_date', '<', '2025-12-18')
+        ]
+
+        searchbar_sortings = {
+            'date': {'label': _('Charging Date'), 'order': 'date desc'},
+            'session_start': {'label': _('Session Start'), 'order': 'session_start desc'},
+            'session_end': {'label': _('Session End'), 'order': 'session_end desc'},
+            'name': {'label': _('Reference'), 'order': 'name'},
+        }
+        if not sortby:
+            sortby = 'session_start'
+        
+        # Date filtering
+        if date_begin and date_end:
+            so_domain += [('create_date', '>', date_begin), ('create_date', '<=', date_end)]
+            am_domain += [('invoice_date', '>', date_begin), ('invoice_date', '<=', date_end)]
+
+        # Fetch all records (needed for mixed sorting/pagination)
+        orders = SaleOrder.search(so_domain)
+        invoices = AccountMove.search(am_domain)
+        
+        # Filter out invoices that are linked to sale orders to avoid duplicates
+        # We check if any invoice line is linked to a sale order line
+        invoices = invoices.filtered(lambda m: not m.invoice_line_ids.sale_line_ids)
+        
+        sessions = list(orders) + list(invoices)
+        
+        # Sorting
+        def get_sort_key(record):
+            if sortby == 'date':
+                val = record.date_order if record._name == 'sale.order' else record.invoice_date
+                return str(val) if val else ''
+            elif sortby == 'session_start':
+                return str(record.session_start) if record.session_start else ''
+            elif sortby == 'session_end':
+                return str(record.session_end) if record.session_end else ''
+            elif sortby == 'name':
+                return record.name or ''
+            return record.id
+
+        reverse = 'desc' in searchbar_sortings[sortby]['order']
+        sessions.sort(key=lambda x: get_sort_key(x), reverse=reverse)
+
+        # Pager
+        session_count = len(sessions)
+        pager = portal_pager(
+            url="/my/sessions",
+            url_args={'date_begin': date_begin, 'date_end': date_end, 'sortby': sortby},
+            total=session_count,
+            page=page,
+            step=self._items_per_page
+        )
+
+        # Slice for current page
+        paginated_sessions = sessions[pager['offset']:pager['offset'] + self._items_per_page]
+        
+        values.update({
+            'date': date_begin,
+            'sessions': paginated_sessions,
+            'page_name': 'session',
+            'pager': pager,
+            'default_url': '/my/sessions',
+            'searchbar_sortings': searchbar_sortings,
+            'sortby': sortby,
+        })
+        return request.render("strohm_addon.portal_my_sessions", values)
+
     def _check_active_charging_sessions(self, user_id, partner_id):
         """
-        Check if user has active charging sessio    ns via backend API.
+        Check if user has active charging sessions via backend API.
 
         Args:
             user_id: Odoo user ID
@@ -29,6 +152,9 @@ class CustomCustomerPortal(CustomerPortal):
         Returns:
             tuple: (has_active_sessions: bool, error_message: str or None, session_data: dict or None)
         """
+        if request.env.user.has_group('base.group_system'):
+            return (False, None, None)
+
         backend_service = get_backend_service()
 
         # Make API call to backend to check for active charging sessions
@@ -89,7 +215,7 @@ class CustomCustomerPortal(CustomerPortal):
         self.BACKEND_URL = os.environ.get('BACKEND_EXTERNAL_URL')
 
         if validation != request.env.user.login:
-            values['error_message'] = _('Die Validierung stimmt nicht mit Ihrer E-Mail überein.')
+            values['error_message'] = _('The validation does not match your email.')
         else:
             # Check for open bills before allowing deactivation
             open_invoices = request.env['account.move'].sudo().search([
@@ -108,18 +234,18 @@ class CustomCustomerPortal(CustomerPortal):
             if open_invoices:
                 invoice_count = len(open_invoices)
                 values['error_message'] = _(
-                    'Das Konto kann nicht deaktiviert werden. Sie haben %s offene Rechnung(en), die zuerst beglichen werden müssen.') % invoice_count
+                    'The account cannot be deactivated. You have %s open invoice(s) that must be paid first.') % invoice_count
                 _logger.warning(
                     f"User {request.env.user.login} attempted to deactivate account with {invoice_count} open invoices")
             elif has_active_sessions:
                 values['error_message'] = _(
-                    'Das Konto kann nicht deaktiviert werden. Sie haben aktive Ladesitzung(en), die zuerst beendet werden müssen.')
+                    'The account cannot be deactivated. You have active charging session(s) that must be ended first.')
                 _logger.warning(
                     f"User {request.env.user.login} attempted to deactivate account with active charging sessions")
             elif api_error:
                 # If there was an API error, we should probably be cautious and not allow deactivation
                 values['error_message'] = _(
-                    'Das Konto kann derzeit nicht deaktiviert werden. Bitte versuchen Sie es später erneut.')
+                    'The account cannot be deactivated at this time. Please try again later.')
                 _logger.error(
                     f"API error prevented account deactivation for user {request.env.user.login}: {api_error}")
             else:
@@ -127,7 +253,7 @@ class CustomCustomerPortal(CustomerPortal):
                 request.session.logout()
 
                 return werkzeug.utils.redirect(
-                    self.BACKEND_URL + '/logout?type=success&message=%s' % urls.url_quote(_('Konto gelöscht!')))
+                    self.BACKEND_URL + '/logout?type=success&message=%s' % urls.url_quote(_('Account deleted!')))
 
         return request.render('portal.portal_my_security', values, headers={
             'X-Frame-Options': 'SAMEORIGIN',
@@ -193,9 +319,7 @@ class CustomCustomerPortal(CustomerPortal):
                     portal_layout_values['has_active_charging_session'] = has_active_sessions
                     portal_layout_values['active_charging_session_data'] = session_data
 
-            # No need to active payment check for now.
-            # portal_layout_values['has_active_payment'] = request.env['payment.token'].sudo().search_count(
-            #     [('partner_id', '=', request.env.user.partner_id.id), ('active', '=', True)]) > 0
+
         except Exception as e:
             _logger.error("Error checking active payment tokens: %s", e)
             # portal_layout_values['has_active_payment'] = False

@@ -1,0 +1,84 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <data>
+        <!-- Add session fields to Sale Order form view (header level) -->
+        <record id="view_order_form_charging_session" model="ir.ui.view">
+            <field name="name">sale.order.form.charging.session</field>
+            <field name="model">sale.order</field>
+            <field name="inherit_id" ref="sale.view_order_form"/>
+            <field name="arch" type="xml">
+                <!-- Add session info after date_order in the header -->
+                <xpath expr="//field[@name='date_order']" position="after">
+                    <field name="session_start"
+                           string="Beginn der Ladesession"
+                           readonly="state in ['sale', 'done', 'cancel']"/>
+                    <field name="session_end"
+                           string="Ende der Ladesession"
+                           readonly="state in ['sale', 'done', 'cancel']"/>
+                    <field name="total_kwh"
+                           string="Geladene Energie (kWh)"/>
+                </xpath>
+            </field>
+        </record>
+
+        <!-- Add session fields to Sale Order list/tree view -->
+        <record id="view_order_tree_charging_session" model="ir.ui.view">
+            <field name="name">sale.order.tree.charging.session</field>
+            <field name="model">sale.order</field>
+            <field name="inherit_id" ref="sale.view_order_tree"/>
+            <field name="arch" type="xml">
+                <xpath expr="//field[@name='date_order']" position="after">
+                    <field name="session_start"
+                           string="Session Start"
+                           optional="show"/>
+                    <field name="session_end"
+                           string="Session End"
+                           optional="show"/>
+                    <field name="total_kwh"
+                           string="kWh"
+                           optional="show"/>
+                </xpath>
+            </field>
+        </record>
+
+        <!-- Add session fields to Sale Order Line in the form view (line level) -->
+        <record id="view_order_form_line_charging_session" model="ir.ui.view">
+            <field name="name">sale.order.form.line.charging.session</field>
+            <field name="model">sale.order</field>
+            <field name="inherit_id" ref="sale.view_order_form"/>
+            <field name="arch" type="xml">
+                <!-- Add session columns to the order lines tree inside the form -->
+                <xpath expr="//field[@name='order_line']/list/field[@name='price_unit']" position="after">
+                    <field name="session_start"
+                           string="Session Start"
+                           optional="show"
+                           readonly="parent.state in ['sale', 'done', 'cancel']"/>
+                    <field name="session_end"
+                           string="Session End"
+                           optional="show"
+                           readonly="parent.state in ['sale', 'done', 'cancel']"/>
+                </xpath>
+            </field>
+        </record>
+
+        <!-- Add session fields to Quotation list/tree view -->
+        <record id="view_quotation_tree_charging_session" model="ir.ui.view">
+            <field name="name">sale.order.quotation.tree.charging.session</field>
+            <field name="model">sale.order</field>
+            <field name="inherit_id" ref="sale.view_quotation_tree"/>
+            <field name="arch" type="xml">
+                <xpath expr="//field[@name='create_date']" position="after">
+                    <field name="session_start"
+                           string="Beginn"
+                           optional="show"/>
+                    <field name="session_end"
+                           string="Ende"
+                           optional="show"/>
+                    <field name="total_kwh"
+                           string="kWh"
+                           optional="show"/>
+                </xpath>
+            </field>
+        </record>
+    </data>
+</odoo>

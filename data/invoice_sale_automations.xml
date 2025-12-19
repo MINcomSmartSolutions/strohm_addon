@@ -1,0 +1,134 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <data noupdate="0">
+        <!-- Invoice State Change Automation -->
+        <record id="automation_invoice_state_change" model="base.automation">
+            <field name="name">Invoice State Changed Sync to Backend</field>
+            <field name="model_id" ref="account.model_account_move"/>
+            <field name="trigger">on_write</field>
+            <field name="active" eval="True"/>
+            <field name="filter_pre_domain" eval="[('move_type', 'in', ['out_invoice', 'out_refund'])]"/>
+            <field name="trigger_field_ids" eval="[(4, ref('account.field_account_move__state')),
+                                                   (4, ref('account.field_account_move__payment_state'))]"/>
+        </record>
+
+        <record id="server_action_invoice_state_change" model="ir.actions.server">
+            <field name="name">Invoice State Changed Sync to Backend - Action</field>
+            <field name="model_id" ref="account.model_account_move"/>
+            <field name="binding_model_id" ref="account.model_account_move"/>
+            <field name="state">code</field>
+            <field name="code">env['strohm_addon.invoice_sync'].sync_invoice_update(record.ids)</field>
+            <field name="usage">base_automation</field>
+            <field name="base_automation_id" ref="automation_invoice_state_change"/>
+        </record>
+
+        <!-- Invoice Created Automation -->
+        <record id="automation_invoice_create" model="base.automation">
+            <field name="name">Invoice Created Sync to Backend</field>
+            <field name="model_id" ref="account.model_account_move"/>
+            <field name="trigger">on_create</field>
+            <field name="active" eval="True"/>
+            <field name="filter_domain" eval="[('move_type', 'in', ['out_invoice', 'out_refund'])]"/>
+        </record>
+
+        <record id="server_action_invoice_create" model="ir.actions.server">
+            <field name="name">Invoice Created Sync to Backend - Action</field>
+            <field name="model_id" ref="account.model_account_move"/>
+            <field name="binding_model_id" ref="account.model_account_move"/>
+            <field name="state">code</field>
+            <field name="code">env['strohm_addon.invoice_sync'].sync_invoice_create(record.ids)</field>
+            <field name="usage">base_automation</field>
+            <field name="base_automation_id" ref="automation_invoice_create"/>
+        </record>
+
+        <!-- Invoice Deleted Automation -->
+        <record id="automation_invoice_unlink" model="base.automation">
+            <field name="name">Invoice Deleted Sync to Backend</field>
+            <field name="model_id" ref="account.model_account_move"/>
+            <field name="trigger">on_unlink</field>
+            <field name="active" eval="True"/>
+            <field name="filter_domain" eval="[('move_type', 'in', ['out_invoice', 'out_refund'])]"/>
+        </record>
+
+        <record id="server_action_invoice_unlink" model="ir.actions.server">
+            <field name="name">Invoice Deleted Sync to Backend - Action</field>
+            <field name="model_id" ref="account.model_account_move"/>
+            <field name="binding_model_id" ref="account.model_account_move"/>
+            <field name="state">code</field>
+            <field name="code"><![CDATA[
+invoice_data = {
+    'id': record.id,
+    'name': record.name,
+    'move_type': record.move_type
+}
+env['strohm_addon.invoice_sync'].sync_invoice_delete(invoice_data)
+            ]]></field>
+            <field name="usage">base_automation</field>
+            <field name="base_automation_id" ref="automation_invoice_unlink"/>
+        </record>
+
+        <!-- Sale Order State Change Automation -->
+        <record id="automation_sale_order_state_change" model="base.automation">
+            <field name="name">Sale Order State Changed Sync to Backend</field>
+            <field name="model_id" ref="sale.model_sale_order"/>
+            <field name="trigger">on_write</field>
+            <field name="active" eval="True"/>
+            <field name="trigger_field_ids" eval="[(4, ref('sale.field_sale_order__state')),
+                                                   (4, ref('sale.field_sale_order__invoice_status'))]"/>
+        </record>
+
+        <record id="server_action_sale_order_state_change" model="ir.actions.server">
+            <field name="name">Sale Order State Changed Sync to Backend - Action</field>
+            <field name="model_id" ref="sale.model_sale_order"/>
+            <field name="binding_model_id" ref="sale.model_sale_order"/>
+            <field name="state">code</field>
+            <field name="code">env['strohm_addon.sale_order_sync'].sync_sale_order_update(record.ids)</field>
+            <field name="usage">base_automation</field>
+            <field name="base_automation_id" ref="automation_sale_order_state_change"/>
+        </record>
+
+<!--        &lt;!&ndash; Sale Order Created Automation &ndash;&gt;-->
+<!--        <record id="automation_sale_order_create" model="base.automation">-->
+<!--            <field name="name">Sale Order Created Sync to Backend</field>-->
+<!--            <field name="model_id" ref="sale.model_sale_order"/>-->
+<!--            <field name="trigger">on_create</field>-->
+<!--            <field name="active" eval="True"/>-->
+<!--        </record>-->
+
+<!--        <record id="server_action_sale_order_create" model="ir.actions.server">-->
+<!--            <field name="name">Sale Order Created Sync to Backend - Action</field>-->
+<!--            <field name="model_id" ref="sale.model_sale_order"/>-->
+<!--            <field name="binding_model_id" ref="sale.model_sale_order"/>-->
+<!--            <field name="state">code</field>-->
+<!--            <field name="code">env['strohm_addon.sale_order_sync'].sync_sale_order_create(record.ids)</field>-->
+<!--            <field name="usage">base_automation</field>-->
+<!--            <field name="base_automation_id" ref="automation_sale_order_create"/>-->
+<!--        </record>-->
+
+        <!-- Sale Order Deleted Automation -->
+        <record id="automation_sale_order_unlink" model="base.automation">
+            <field name="name">Sale Order Deleted Sync to Backend</field>
+            <field name="model_id" ref="sale.model_sale_order"/>
+            <field name="trigger">on_unlink</field>
+            <field name="active" eval="True"/>
+        </record>
+
+        <record id="server_action_sale_order_unlink" model="ir.actions.server">
+            <field name="name">Sale Order Deleted Sync to Backend - Action</field>
+            <field name="model_id" ref="sale.model_sale_order"/>
+            <field name="binding_model_id" ref="sale.model_sale_order"/>
+            <field name="state">code</field>
+            <field name="code"><![CDATA[
+order_data = {
+    'id': record.id,
+    'name': record.name,
+    'state': record.state if record.state else 'unknown',
+    'record': record
+}
+env['strohm_addon.sale_order_sync'].sync_sale_order_delete(order_data)
+            ]]></field>
+            <field name="usage">base_automation</field>
+            <field name="base_automation_id" ref="automation_sale_order_unlink"/>
+        </record>
+    </data>
+</odoo>
