@@ -6,6 +6,10 @@ from odoo import models, fields, api
 
 _logger = logging.getLogger(__name__)
 
+# Maximum average power (kW) threshold for automatic invoice confirmation
+# This is more of a simple check if the avg energy was delivered under the physical limits of the installed charging stations.
+AUTO_CONFIRM_MAX_AVG_POWER_KW = 20.0
+
 
 class SaleOrder(models.Model):
     _inherit = 'sale.order'
@@ -34,7 +38,7 @@ class SaleOrder(models.Model):
             frequencies_to_process.append('monthly')
 
         # Quarterly: process on the 1st of Jan(1), Apr(4), Jul(7), Oct(10)
-        if day == 1 and month in (1, 4, 7, 10):
+        if day == 1 and month in (4, 7, 10): # Add Jan(1) to the list after 01.01.26
             frequencies_to_process.append('quarterly')
 
         if not frequencies_to_process:
@@ -101,10 +105,76 @@ class SaleOrder(models.Model):
                         'invoice_date_due': fields.Date.add(fields.Date.today(), months=1),
                     })
                     invoices_created += len(invoices)
-                    _logger.info(f"Created invoice(s) {invoices.mapped('name')} for partner {partner.name}")
+                    _logger.info(f"Created invoice(s) {invoices.mapped('id')} for partner {partner.name}")
+
+                    # Auto-confirm invoices where average power is under threshold
+                    self._auto_confirm_low_power_invoices(invoices)
 
             except Exception as e:
                 _logger.error(f"Error creating invoice for partner {partner.name} (ID: {partner.id}): {str(e)}", exc_info=True)
                 continue
 
         return invoices_created
+
+    @api.model
+    def _calculate_invoice_average_power(self, invoice):
+        """
+        Calculate the average power (kW) for an invoice based on its lines.
+
+        Average power is calculated as: total_kwh / duration_in_hours
+        where duration is the time between session_start and session_end.
+
+        Returns:
+            float: Average power in kW, or None if calculation is not possible
+                   (missing session times or zero duration)
+        """
+        if not invoice.session_start or not invoice.session_end:
+            return None
+
+        duration = invoice.session_end - invoice.session_start
+        duration_hours = duration.total_seconds() / 3600.0
+
+        if duration_hours <= 0:
+            return None
+
+        return invoice.total_kwh / duration_hours
+
+    @api.model
+    def _auto_confirm_low_power_invoices(self, invoices):
+        """
+        Automatically confirm (post) invoices where the average power is under the threshold.
+
+        Average power = total_kwh / (session_end - session_start in hours)
+        Invoices are only confirmed if the average power is under AUTO_CONFIRM_MAX_AVG_POWER_KW.
+
+        Args:
+            invoices: Recordset of account.move (invoices) to evaluate
+        """
+        for invoice in invoices:
+            try:
+                avg_power = self._calculate_invoice_average_power(invoice)
+
+                if avg_power is None:
+                    _logger.debug(
+                        f"Cannot calculate average power for invoice {invoice.id}: "
+                        f"missing session times or zero duration"
+                    )
+                    continue
+
+                if avg_power < AUTO_CONFIRM_MAX_AVG_POWER_KW:
+                    _logger.info(
+                        f"Auto-confirming invoice {invoice.id} with average power "
+                        f"{avg_power:.2f} kW (under {AUTO_CONFIRM_MAX_AVG_POWER_KW} kW threshold)"
+                    )
+                    invoice.action_post()
+                else:
+                    _logger.warning(
+                        f"Invoice {invoice.id} NOT auto-confirmed: average power "
+                        f"{avg_power:.2f} kW exceeds {AUTO_CONFIRM_MAX_AVG_POWER_KW} kW threshold"
+                    )
+            except Exception as e:
+                _logger.error(
+                    f"Error auto-confirming invoice {invoice.id}: {str(e)}",
+                    exc_info=True
+                )
+
