@@ -36,7 +36,7 @@
                 <t t-set="session_count" t-value="len(session_lines)"/>
                 
                 <!-- Single Session: Show Ladesitzungsdetails block -->
-                <div class="row mb-4" t-if="session_count == 1 and (o.session_start or o.session_end)">
+                <div class="row mb-4" t-if="session_count == 1 and (o.session_start and o.session_end)">
                     <div class="col-12">
                         <div class="alert alert-info"
                              style="background-color: rgb(243, 243, 243); border-radius: 0; border: 1px solid black;">
