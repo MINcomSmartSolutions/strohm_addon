@@ -74,7 +74,7 @@ class CustomCustomerPortal(CustomerPortal):
             ('partner_id', '=', partner.id),
             ('move_type', '=', 'out_invoice'),
             ('session_start', '!=', False),
-            ('invoice_date', '<', '2025-12-18')
+            ('invoice_date', '<', '2025-12-22')
         ]
 
         searchbar_sortings = {
