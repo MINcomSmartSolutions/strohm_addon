@@ -150,7 +150,7 @@
                                                 t-out="object.partner_id.name or 'Kund*in'"/>,</p>
 
                                             <p style="margin: 0 0 15px;">
-                                                Vielen Dank für das Laden Ihres Fahrzeugs an der Hochschule München. Der nachfolgende Ladevorgang wurde erfolgreich abgeschlossen.
+                                                vielen Dank für das Laden Ihres Fahrzeugs an der Hochschule München. Der nachfolgende Ladevorgang wurde erfolgreich abgeschlossen.
                                                 Die Abrechnung der Energiemengen erfolgt auf Basis des jeweils gültigen Ladetarifs, den Sie im <a href="https://laden.hm.edu/my/invoices">Nutzerportal</a> einsehen können.
                                             </p>
                                             <p style="margin: 0 0 15px;">
