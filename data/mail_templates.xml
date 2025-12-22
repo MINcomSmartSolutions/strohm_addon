@@ -5,7 +5,7 @@
         <record id="email_template_charging_invoice" model="mail.template">
             <field name="name">Ladevorgang - Rechnung bestätigt</field>
             <field name="model_id" ref="account.model_account_move"/>
-            <field name="subject">Ihre Rechnung zum Ladevorgang{{ (' am ' + format_date(object.session_start, date_format='dd.MM.yyyy')) if object.session_start else '' }}{{ (' - %.2f kWh' % object.total_kwh) if object.total_kwh else '' }}</field>
+            <field name="subject">{{ 'Ihre Rechnung zum Ladevorgang' if len(object.invoice_line_ids) == 1 else 'Ihre Rechnung zu Ladevorgängen' }}{{ (' am ' + format_date(object.session_start, date_format='dd.MM.yyyy')) if (len(object.invoice_line_ids) == 1 and object.session_start) else '' }}{{ (' - %.2f kWh' % object.total_kwh) if (len(object.invoice_line_ids) == 1 and object.total_kwh) else '' }}</field>
             <field name="email_from">{{ object.company_id.name }} &lt;no-reply.laden@hm.edu&gt;</field>
             <field name="email_to">{{ object.partner_id.email }}</field>
             <field name="reply_to">&lt;abrechnung.laden@hm.edu&gt;</field>
@@ -37,49 +37,79 @@
                                                 Bis dahin werden Ihre Rechnungen im Portal gesammelt; die bis dahin angefallenen Beträge sind anschließend über das Landesamt für Finanzen zu bezahlen.
                                             </p>
 
-                                            <!-- Charging Session Details -->
-                                            <div
-                                                style="background-color: #f0f7ff; border-left: 4px solid #667eea; padding: 15px; margin: 20px 0;">
-                                                <h3 style="margin: 0 0 10px; color: #667eea; font-size: 18px;">
-                                                    Details zum Ladevorgang
-                                                </h3>
+                            <!-- Charging Session Details -->
+                                <div style="background-color: #f0f7ff; border-left: 4px solid #667eea; padding: 15px; margin: 20px 0;">
+                                    <t t-if="len(object.invoice_line_ids) == 1">
+                                        <h3 style="margin: 0 0 10px; color: #667eea; font-size: 18px;">
+                                            Details zum Ladevorgang
+                                        </h3>
 
-                                                <t t-if="object.session_start">
-                                                    <p style="margin: 5px 0;">
-                                                        <strong>Beginn:</strong> <t t-out="object.session_start"
-                                                                                    t-options="{'widget': 'datetime', 'tz_name': object.partner_id.tz or 'Europe/Berlin', 'format': 'dd.MM.yyyy HH:mm'}"/>
-                                                    </p>
-                                                </t>
+                                        <t t-if="object.session_start">
+                                            <p style="margin: 5px 0;">
+                                                <strong>Beginn:</strong> <t t-out="object.session_start"
+                                                                            t-options="{'widget': 'datetime', 'tz_name': object.partner_id.tz or 'Europe/Berlin', 'format': 'dd.MM.yyyy HH:mm'}"/>
+                                            </p>
+                                        </t>
 
-                                                <t t-if="object.session_end">
-                                                    <p style="margin: 5px 0;">
-                                                        <strong>Ende:</strong> <t t-out="object.session_end"
-                                                                                  t-options="{'widget': 'datetime', 'tz_name': object.partner_id.tz or 'Europe/Berlin', 'format': 'dd.MM.yyyy HH:mm'}"/>
-                                                    </p>
-                                                </t>
+                                        <t t-if="object.session_end">
+                                            <p style="margin: 5px 0;">
+                                                <strong>Ende:</strong> <t t-out="object.session_end"
+                                                                          t-options="{'widget': 'datetime', 'tz_name': object.partner_id.tz or 'Europe/Berlin', 'format': 'dd.MM.yyyy HH:mm'}"/>
+                                            </p>
+                                        </t>
 
-                                                <t t-if="object.session_start and object.session_end">
-                                                    <t t-set="duration"
-                                                       t-value="object.session_end - object.session_start"/>
-                                                    <t t-set="hours" t-value="int(duration.total_seconds() // 3600)"/>
-                                                    <t t-set="minutes"
-                                                       t-value="int((duration.total_seconds() % 3600) // 60)"/>
-                                                    <p style="margin: 5px 0;">
-                                                        <strong>Ladedauer:</strong> <t t-out="hours"/> Std. <t t-out="minutes"/> Min.
-                                                    </p>
-                                                </t>
+                                        <t t-if="object.session_start and object.session_end">
+                                            <t t-set="duration"
+                                               t-value="object.session_end - object.session_start"/>
+                                            <t t-set="hours" t-value="int(duration.total_seconds() // 3600)"/>
+                                            <t t-set="minutes"
+                                               t-value="int((duration.total_seconds() % 3600) // 60)"/>
+                                            <p style="margin: 5px 0;">
+                                                <strong>Ladedauer:</strong> <t t-out="hours"/> Std. <t t-out="minutes"/> Min.
+                                            </p>
+                                        </t>
+                                        <t t-set="total_kwh"
+                                           t-value="sum(object.invoice_line_ids.filtered(lambda l: l.product_uom_id and l.product_uom_id.name == 'kWh').mapped('quantity'))"/>
+                                        <t t-if="total_kwh >= 0">
+                                            <p style="margin: 5px 0;">
+                                                <strong>Geladene Energiemenge:</strong> <t
+                                                t-out="'%.2f' % total_kwh"/> kWh
+                                            </p>
+                                        </t>
+                                    </t>
+                                    <t t-else="">
+                                        <h3 style="margin: 0 0 10px; color: #667eea; font-size: 18px;">
+                                            Details zu den Ladevorgängen
+                                        </h3>
 
-                                                <t t-set="total_kwh"
-                                                   t-value="sum(object.invoice_line_ids.filtered(lambda l: l.product_uom_id and l.product_uom_id.name == 'kWh').mapped('quantity'))"/>
-                                                <t t-if="total_kwh >= 0">
-                                                    <p style="margin: 5px 0;">
-                                                        <strong>Geladene Energiemenge:</strong> <t
-                                                        t-out="'%.2f' % total_kwh"/> kWh
-                                                    </p>
-                                                </t>
-                                            </div>
+                                        <p style="margin: 5px 0;">
+                                            Diese Rechnung umfasst mehrere Ladevorgänge. Detaillierte Informationen zu den einzelnen Ladevorgängen finden Sie in der angehängten Rechnung.
+                                        </p>
 
-                                            <!-- Invoice Summary -->
+                                         <t t-if="object.session_start">
+                                            <p style="margin: 5px 0;">
+                                                <strong>Abrechnungszeitraum Beginn:</strong> <t t-out="object.session_start"
+                                                                            t-options="{'widget': 'datetime', 'tz_name': object.partner_id.tz or 'Europe/Berlin', 'format': 'dd.MM.yyyy HH:mm'}"/>
+                                            </p>
+                                        </t>
+
+                                        <t t-if="object.session_end">
+                                            <p style="margin: 5px 0;">
+                                                <strong>Abrechnungszeitraum Ende:</strong> <t t-out="object.session_end"
+                                                                          t-options="{'widget': 'datetime', 'tz_name': object.partner_id.tz or 'Europe/Berlin', 'format': 'dd.MM.yyyy HH:mm'}"/>
+                                            </p>
+                                        </t>
+
+                                        <t t-set="total_kwh"
+                                            t-value="sum(object.invoice_line_ids.filtered(lambda l: l.product_uom_id and l.product_uom_id.name == 'kWh').mapped('quantity'))"/>
+                                        <t t-if="total_kwh >= 0">
+                                            <p style="margin: 5px 0;">
+                                                <strong>Gesamte geladene Energiemenge:</strong> <t
+                                                t-out="'%.2f' % total_kwh"/> kWh
+                                            </p>
+                                        </t>
+                                    </t>
+                                </div>
                                             <div
                                                 style="background-color: #fff9e6; border-left: 4px solid #ffa500; padding: 15px; margin: 20px 0;">
                                                 <h3 style="margin: 0 0 10px; color: #ffa500; font-size: 18px;">
