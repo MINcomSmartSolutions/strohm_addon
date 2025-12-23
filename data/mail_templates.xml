@@ -30,11 +30,11 @@
 
                                             <p style="margin: 0 0 15px;">
                                                 Ihre Rechnung für den Ladevorgang an der Hochschule München wurde erstellt.
-                                                Die Abrechnung der Energiemengen erfolgt auf Basis des jeweils gültigen Ladetarifs, den Sie im <a href="https://laden.hm.edu/my/invoices">Nutzerportal</a> einsehen können.
+                                                Die Abrechnung der Energiemengen erfolgt auf Basis des jeweils gültigen Ladetarifs, den Sie im <a href="https://laden.hm.edu/">Nutzerportal</a> einsehen können.
                                             </p>
                                             <p style="margin: 0 0 15px;">
-                                                Voraussichtlich bis spätestens April 2026 wird eine Lösung bereitstehen, mit der Sie Ihre Rechnungen über das Landesamt für Finanzen begleichen können.
-                                                Bis dahin werden Ihre Rechnungen im Portal gesammelt; die bis dahin angefallenen Beträge sind anschließend über das Landesamt für Finanzen zu bezahlen.
+                                                Voraussichtlich bis April 2026 wird eine Lösung bereitstehen, mit der Sie Ihre Rechnungen über das Landesamt für Finanzen begleichen können.
+                                                Bis dahin werden Ihre Ladevorgänge im Portal gesammelt; die bis dahin angefallenen Beträge sind nach Rechnungsstellung über das Nutzerportal beim Landesamt für Finanzen zu bezahlen.
                                             </p>
 
                             <!-- Charging Session Details -->
@@ -181,11 +181,11 @@
 
                                             <p style="margin: 0 0 15px;">
                                                 vielen Dank für das Laden Ihres Fahrzeugs an der Hochschule München. Der nachfolgende Ladevorgang wurde erfolgreich abgeschlossen.
-                                                Die Abrechnung der Energiemengen erfolgt auf Basis des jeweils gültigen Ladetarifs, den Sie im <a href="https://laden.hm.edu/my/invoices">Nutzerportal</a> einsehen können.
+                                                Die Abrechnung der Energiemengen erfolgt auf Basis des jeweils gültigen Ladetarifs, den Sie im <a href="https://laden.hm.edu/">Nutzerportal</a> einsehen können.
                                             </p>
                                             <p style="margin: 0 0 15px;">
-                                                Voraussichtlich bis spätestens April 2026 wird eine Lösung bereitstehen, mit der Sie Ihre Rechnungen über das Landesamt für Finanzen begleichen können.
-                                                Bis dahin werden Ihre Ladevorgänge im Portal gesammelt; die bis dahin angefallenen Beträge sind anschließend über das Landesamt für Finanzen zu bezahlen.
+                                                Voraussichtlich bis April 2026 wird eine Lösung bereitstehen, mit der Sie Ihre Rechnungen über das Landesamt für Finanzen begleichen können.
+                                                Bis dahin werden Ihre Ladevorgänge im Portal gesammelt; die bis dahin angefallenen Beträge sind nach Rechnungsstellung über das Nutzerportal beim Landesamt für Finanzen zu bezahlen.
                                             </p>
 
                                             <!-- Charging Session Details -->
@@ -245,7 +245,7 @@
 
                                             <p style="margin: 20px 0 15px;">
                                                 Alle Details zu Ihren Ladevorgängen können Sie jederzeit in Ihrem
-                                                <a href="https://laden.hm.edu/my/home">Nutzerportal</a> einsehen.
+                                                <a href="https://laden.hm.edu/">Nutzerportal</a> einsehen.
                                                 Die Rechnungerstellung erfolgt nach dem Quartalsende.
                                             </p>
                                             <p>
