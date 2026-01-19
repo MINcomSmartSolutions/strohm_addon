@@ -12,6 +12,8 @@ def strohm_init_parameters(env):
     on individual model instances rather than on the environment itself, which avoids
     the "Expected singleton: res.users()" error.
 
+    PS. Parameter changes are prohibited and controlled via ir.config_parameter.py
+
     Args:
         env: Odoo environment object
     """
@@ -28,6 +30,21 @@ def strohm_init_parameters(env):
         _logger.info("Disabled digest.default_digest_emails")
     except Exception as e:
         _logger.warning("Failed to disable digest.default_digest_emails: %s", e)
+
+    # Disable password reset email
+    try:
+        env['ir.config_parameter'].sudo().set_param('auth_signup.reset_password', 'False')
+        _logger.info("Disabled auth_signup.reset_password")
+    except Exception as e:
+        _logger.warning("Failed to disable auth_signup.reset_password %s", e)
+
+    # Disable sale.async_emails
+    try:
+        env['ir.config_parameter'].sudo().set_param('sale.async_emails', 'False')
+        _logger.info("Disabled sale.async_emails")
+    except Exception as e:
+        _logger.warning("Failed to disable sale.async_emails %s", e)
+
 
     # Disable default digest ID
     try:
@@ -61,6 +78,13 @@ def strohm_init_parameters(env):
         _logger.info("Disabled automatic sale order confirmation emails")
     except Exception as e:
         _logger.warning("Failed to disable sale order confirmation emails: %s", e)
+
+    try:
+        env['ir.config_parameter'].sudo().set_param('sale.async_emails', 'False')
+        _logger.info("Disabled automatic sale.async_emails")
+    except Exception as e:
+        _logger.warning("Failed to disable sale.async_emails %s", e)
+
 
     # Deactivate scheduled email actions (mass mailings, etc.)
     try:
