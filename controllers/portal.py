@@ -187,9 +187,6 @@ class CustomCustomerPortal(CustomerPortal):
     def _get_electricity_price(self):
         """
         Get current electricity price from backend API.
-
-        Returns:
-            float or None: The electricity price in ct/kWh, or None if request fails
         """
         backend_service = get_backend_service()
 
@@ -198,10 +195,12 @@ class CustomCustomerPortal(CustomerPortal):
 
         success, data, error = backend_service.get_internal(endpoint)
         if success and data:
-            price = data.get('price_data').get('price_ct_kwh', None)
+            price_eur_kwh = data.get('price_data').get('price_eur_kwh', None)
             valid_till = data.get('price_data').get('valid_till', None)
-            _logger.info(f"Electricity price retrieved successfully: {price} ct/kWh")
-            return price, valid_till
+            rate = data.get('vat_rate').get('rate', 0)
+            price_eur_kwh = price_eur_kwh * (1 + rate / 100) if price_eur_kwh is not None else price_eur_kwh
+            _logger.info(f"Electricity price retrieved successfully: {price_eur_kwh} eur/kWh")
+            return price_eur_kwh, valid_till
         else:
             _logger.error(f"Error fetching electricity price: {error}")
             return None
@@ -287,9 +286,10 @@ class CustomCustomerPortal(CustomerPortal):
     def _prepare_portal_layout_values(self):
         portal_layout_values = super()._prepare_portal_layout_values()
         try:
-            price, valid_till = self._get_electricity_price() # To show the current price for info
-            if price is not None:
-                portal_layout_values['electricity_price_ct_kwh'] = price
+            price_eur_kwh, valid_till = self._get_electricity_price()
+            if price_eur_kwh is not None:
+                portal_layout_values['electricity_price_ct_kwh'] = round(price_eur_kwh * 100)
+
             if valid_till is not None:
                 # Format the datetime string to German format (dd.MM.yyyy HH:mm)
                 try:
