@@ -63,10 +63,12 @@ class BillLineItem(BaseModel):
     sku: str = Field(..., min_length=3, max_length=50)
     # Quantity and price must be non-negative
     quantity: float = Field(..., ge=0)
-    price_unit: float = Field(..., ge=0)
+    price_unit: float = Field(..., ge=0) # if tax included this is probably BRUTTO and if not NETTO
     session_start: str = Field(..., max_length=30)
     session_end: str = Field(..., max_length=30)
     session_backend_ref: int = Field(..., gt=0)
+    tax_rate: Optional[int] = Field(None, ge=0, le=100)
+    tax_included: Optional[bool] = False
 
     @field_validator('sku')
     def validate_sku(cls, v, info):

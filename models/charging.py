@@ -5,6 +5,9 @@ from odoo.exceptions import UserError, ValidationError
 
 _logger = logging.getLogger(__name__)
 
+_UOM_ENERGY_CATEG = 'strohm_addon.uom_categ_energy'
+_UOM_KWH = 'strohm_addon.product_uom_kwh'
+
 
 class ChargingSessionInvoice(models.TransientModel):
     _name = 'charging.session.invoice'
@@ -43,21 +46,31 @@ class ChargingSessionInvoice(models.TransientModel):
         if not lines_data:
             raise ValidationError('No line items provided for invoicing.')
 
+        tax_cache = {}
         for line_item in lines_data:
             # Find product (but don't create or modify it)
             product = self.sudo()._get_or_create_product(line_item)
 
+            # Resolve tax: use per-line override if provided, otherwise fall back to product default
+            if line_item.tax_rate is not None:
+                tax = self._resolve_tax(line_item.tax_rate, bool(line_item.tax_included), tax_cache)
+                tax_ids = [(6, 0, [tax.id])]
+            else:
+                tax_ids = [(6, 0, product.taxes_id.ids)]
+
             # Build the sale order line vals
             qty = line_item.quantity
+            uom = self.env.ref(_UOM_KWH)
             order_lines.append((0, 0, {
                 'product_id': product.id,
                 'product_uom_qty': qty,
+                'product_uom': uom.id,
                 'qty_delivered': qty,
                 'price_unit': line_item.price_unit,
                 'session_start': line_item.session_start,
                 'session_end': line_item.session_end,
                 'session_backend_ref': line_item.session_backend_ref,
-                'tax_id': [(6, 0, product.taxes_id.ids)],
+                'tax_id': tax_ids,
             }))
 
         # Create the Sale Order
@@ -172,7 +185,7 @@ class ChargingSessionInvoice(models.TransientModel):
         line_count = 0
 
         # Get energy category
-        energy_category = self.env.ref('strohm_addon.uom_categ_energy', raise_if_not_found=False)
+        energy_category = self.env.ref(_UOM_ENERGY_CATEG, raise_if_not_found=False)
 
         for invoice in invoices_with_sessions:
             session_start = invoice.session_start
@@ -225,7 +238,6 @@ class ChargingSessionInvoice(models.TransientModel):
                              f"start={session_start}, end={session_end}")
             except Exception as e:
                 _logger.error(f"Failed to migrate invoice {invoice.name}: {e}")
-                # Rollback transaction on error to prevent partial updates or database locks
                 self.env.cr.rollback()
 
         if (migrated_count > 0):
@@ -256,7 +268,6 @@ class ChargingSessionInvoice(models.TransientModel):
             {
                 'name': 'Ladesitzung',
                 'sku': 'standard_charging',
-                'uom_name': 'kWh',
                 'base_price': 0.35,
                 # list_price is set to base_price by default and can be set changed with price_unit when creating invoice
             },
@@ -273,24 +284,11 @@ class ChargingSessionInvoice(models.TransientModel):
             if not product:
                 _logger.info(f"Product with SKU {sku} not found, creating new product")
 
-                # Create UoM if needed
-                uom_name = data.get('uom_name', 'kWh')
-                uom = self.env['uom.uom'].search([('name', '=', uom_name)], limit=1)
-                if not uom:
-                    _logger.info(f"UOM {uom_name} not found, creating new UOM")
-                    category = self.env.ref('uom.uom_categ_energy', raise_if_not_found=False)
-                    uom = self.env['uom.uom'].create({
-                        'name': uom_name,
-                        'category_id': category.id,
-                        'rounding': 0.01,
-                        'factor_inv': 1.0,
-                    })
-                    self.env.cr.commit()  # Commit UOM creation
+                # Use our custom kWh UoM defined in data/uom_data.xml
+                uom = self.env.ref(_UOM_KWH)
 
-                # Create product
                 _logger.info(f"Creating product with SKU: {sku}, name: {data.get('name', sku)}")
 
-                # Fix: Proper way to get the German country
                 country = self.env.ref('base.de', raise_if_not_found=False)
                 if not country:
                     country = self.env['res.country'].search([('code', '=', 'DE')], limit=1)
@@ -328,7 +326,7 @@ class ChargingSessionInvoice(models.TransientModel):
                     'type': 'consu',
                     'uom_id': uom.id,
                     'uom_po_id': uom.id,
-                    'list_price': data.get('base_price', 0.35),
+                    'list_price': data.get('base_price', 0.30),
                     'invoice_policy': 'delivery',
                     # In Odoo, the tuple `(6, 0, ids)` is a special command used in many2many and one2many fields to set the field's value. Here:
                     #
@@ -346,6 +344,56 @@ class ChargingSessionInvoice(models.TransientModel):
             products[sku] = product
 
         return products
+
+    def _resolve_tax(self, amount, price_include: bool, cache):
+        """Find or create an account.tax by amount and price_include flag.
+
+        Results are cached by (amount, price_include) for the duration of the call.
+        """
+        key = (amount, price_include)
+        if key in cache:
+            return cache[key]
+
+        Tax = self.env['account.tax'].sudo()
+
+        if amount == 0:
+            tax = Tax.search([
+                ('name', '=', '0% C EXEMPT'),
+                ('type_tax_use', '=', 'sale'),
+                ('amount', '=', 0),
+                ('price_include', '=', price_include),
+            ], limit=1)
+            if not tax:
+                tax = Tax.create({
+                    'name': '0% C EXEMPT',
+                    'amount': 0,
+                    'amount_type': 'percent',
+                    'type_tax_use': 'sale',
+                    'price_include': price_include,
+                })
+                _logger.info(f"Created tax id={tax.id} name={tax.name}")
+            cache[key] = tax
+            return tax
+
+        tax = Tax.search([
+            ('amount', '=', amount),
+            ('price_include', '=', price_include),
+            ('type_tax_use', '=', 'sale'),
+        ], limit=1)
+
+        if not tax:
+            incl_label = 'inkl.' if price_include else 'exkl.'
+            tax = Tax.create({
+                'name': f'{amount}% USt ({incl_label})',
+                'amount': amount,
+                'amount_type': 'percent',
+                'type_tax_use': 'sale',
+                'price_include': price_include,
+            })
+            _logger.info(f"Created tax id={tax.id} name={tax.name}")
+
+        cache[key] = tax
+        return tax
 
     def _get_or_create_product(self, data):
         """
@@ -411,7 +459,7 @@ class AccountMove(models.Model):
     @api.depends('invoice_line_ids.quantity', 'invoice_line_ids.product_uom_id')
     def _compute_total_kwh(self):
         """Calculate total kWh from invoice lines with Energy unit of measure category"""
-        energy_category = self.env.ref('strohm_addon.uom_categ_energy', raise_if_not_found=False)
+        energy_category = self.env.ref(_UOM_ENERGY_CATEG, raise_if_not_found=True)
         for record in self:
             total = 0.0
             for line in record.invoice_line_ids:

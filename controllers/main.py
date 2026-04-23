@@ -19,7 +19,7 @@ from odoo import http, fields
 from odoo.exceptions import ValidationError, AccessDenied
 from odoo.http import request, Controller
 from ..schemas.validation import (
-    UserCreate, ApiKeyRotation, PaymentMethodCheck,
+    UserCreate, ApiKeyRotation,
     BillCreate, PortalLogin
 )
 from ..utils import strohm_init_parameters, ensure_standard_products
@@ -257,28 +257,6 @@ class StrohmAPI(Controller):
         expected_hash = self._generate_hash(message, secret)
         return secrets.compare_digest(hash, expected_hash)
 
-    def _check_valid_payment_method(self, partner_id):
-        """Check if user has a valid payment method"""
-        if not partner_id:
-            _logger.debug("No partner ID provided, cannot check payment method")
-            return False
-
-        _logger.debug(f"Checking if partner {partner_id} has a valid payment method")
-
-        try:
-            payment_token = request.env['payment.token'].sudo().search(
-                [('partner_id', '=', partner_id), ('active', '=', True)], limit=1
-            )
-            return bool(payment_token and payment_token.exists())
-        except Exception as e:
-            _logger.error(f"Error checking payment method for partner {partner_id}: {str(e)}", exc_info=True)
-            return False
-
-    @http.route('/internal/test', type='http', auth='public', methods=['GET'], csrf=False)
-    def test(self, **kw):
-        """Test endpoint"""
-        return request.make_json_response({'status': self._check_valid_payment_method(44)}, status=200)
-
     def _debug_accounting_user(self):
         """Internal method to verify accounting user setup for debugging"""
         try:
@@ -307,53 +285,6 @@ class StrohmAPI(Controller):
         except Exception as e:
             _logger.error(f"Debug accounting user error: {str(e)}", exc_info=True, stack_info=True)
             return None
-
-    @http.route('/internal/user/valid_pm', type='http', auth='public', methods=['POST'], csrf=False)
-    def check_payment_method(self, **kw):
-        try:
-            # Parse and validate request data with Pydantic
-            try:
-                data = json.loads(request.httprequest.data)
-                validated_data = PaymentMethodCheck(**data)
-            except PydanticValidationError as e:
-                errors = e.errors()
-                error_msgs = [f"{err['loc'][0]}: {err['msg']}" for err in errors]
-                return request.make_json_response({'error': error_msgs}, status=400)
-            except json.JSONDecodeError:
-                return request.make_json_response({'error': 'Invalid JSON'}, status=400)
-
-            # Continue with validation using the validated data
-            decrypted_key = self._decrypt_api_key(validated_data.key, validated_data.key_salt)
-
-            # Continue with the existing validation logic
-            user_id = request.env['res.users.apikeys'].sudo()._check_credentials(scope='rpc', key=decrypted_key)
-            if not user_id == int(validated_data.user_id):
-                raise ValidationError("Invalid API key")
-
-            partner_id = request.env['res.users'].sudo().browse(validated_data.user_id).partner_id.id
-            if not partner_id or not partner_id == int(validated_data.partner_id):
-                raise ValidationError("Invalid partner ID")
-
-            message = f"{validated_data.timestamp}{validated_data.user_id}{validated_data.partner_id}{validated_data.key}{validated_data.key_salt}{validated_data.salt}"
-            if not (self._validate_hash(validated_data.hash, message)):
-                return request.make_json_response({'error': 'Invalid signature'}, status=403)
-
-            has_valid_payment_method = 1 if (self._check_valid_payment_method(partner_id)) else 0
-
-            resp_timestamp = datetime.utcnow().strftime(self.datetime_format)
-            _salt = self._generate_salt(decode=True)
-            resp_message = f"{resp_timestamp}{has_valid_payment_method}{_salt}"
-            _hash = self._generate_hash(resp_message)
-
-            return request.make_json_response(
-                {'timestamp': resp_timestamp, 'result': has_valid_payment_method, 'salt': _salt, 'hash': _hash},
-                status=200)
-
-        except ValidationError as ve:
-            return request.make_json_response({'error': str(ve)}, status=400)
-        except Exception as e:
-            _logger.error(f"Valid payment method check error: {str(e)}", exc_info=True, stack_info=True)
-            return request.make_json_response({'error': str(e)}, status=500)
 
     @http.route('/internal/rotate_api_key', type='http', auth='public', methods=['POST'], csrf=False)
     def rotate_api_key(self, **kw):
@@ -453,7 +384,8 @@ class StrohmAPI(Controller):
                 # Verify the user and partner are associated
                 if existing_user.partner_id.id != existing_partner.id:
                     return request.make_json_response(
-                        {'error': f'Data inconsistency: user and partner with email {validated_data.email} are not properly linked'},
+                        {
+                            'error': f'Data inconsistency: user and partner with email {validated_data.email} are not properly linked'},
                         status=500
                     )
 
@@ -537,7 +469,6 @@ class StrohmAPI(Controller):
                 'groups_id': [(6, 0, [portal_group.id])],
             }
 
-
             user = request.env['res.users'].sudo().with_context(no_reset_password=True).create(user_values)
 
             # Generate and store API key for new user using the new method
@@ -593,7 +524,8 @@ class StrohmAPI(Controller):
                 return request.make_json_response({'error': 'Expired'}, status=403)
 
             # Decrypt API key
-            decrypted_key = self._decrypt_api_key(parameters['key'], parameters['key_salt']) # Directly from kw to avoid pydantic re-encoding issues
+            decrypted_key = self._decrypt_api_key(parameters['key'], parameters[
+                'key_salt'])  # Directly from kw to avoid pydantic re-encoding issues
             _logger.debug(' User API key decrypted successfully')
 
             # Directly check the API key
@@ -604,7 +536,7 @@ class StrohmAPI(Controller):
 
             # Create the message that was used for the signature
             # One thing here to note is that user_id is parsed from api key and not send as parameter or data. This makes sures only backend knows the user id (odoo_user_id)
-            message = f"{parameters['timestamp']}{user_id}{parameters['key']}{parameters['key_salt']}{parameters['salt']}" # Directly from kw to avoid pydantic re-encoding issues
+            message = f"{parameters['timestamp']}{user_id}{parameters['key']}{parameters['key_salt']}{parameters['salt']}"  # Directly from kw to avoid pydantic re-encoding issues
             if not (self._validate_hash(parameters['hash'], message)):
                 return request.make_json_response({'error': 'Invalid signature'}, status=403)
 
