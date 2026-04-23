@@ -4,6 +4,8 @@ from odoo import models, fields, api
 
 _logger = logging.getLogger(__name__)
 
+_UOM_ENERGY_CATEG = 'strohm_addon.uom_categ_energy'
+
 
 class SaleOrderLine(models.Model):
     """
@@ -96,7 +98,7 @@ class SaleOrder(models.Model):
     @api.depends('order_line.product_uom_qty', 'order_line.product_uom')
     def _compute_total_kwh(self):
         """Calculate total kWh from order lines with Energy unit of measure category"""
-        energy_category = self.env.ref('strohm_addon.uom_categ_energy', raise_if_not_found=False)
+        energy_category = self.env.ref(_UOM_ENERGY_CATEG, raise_if_not_found=True)
         for order in self:
             total = 0.0
             for line in order.order_line:

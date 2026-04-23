@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <odoo>
-    <data>
+    <data noupdate="1">
         <record id="uom_categ_energy" model="uom.category">
             <field name="name">Energy</field>
         </record>

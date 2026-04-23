@@ -7,9 +7,30 @@
 
 // Define primary color for use in this file
 $strohm-primary: #3D46D9;
+$strohm-primary-disabled: #3D46D950;
 
 // Custom Primary Button Styling
 // ----------------------------------------------------------------------------
+// Override Bootstrap 5 CSS custom properties for primary buttons
+.btn-fill-primary,
+.btn-primary,
+.modern .XItem.XSubmit.btnSubmit {
+    --btn-color: #FFFFFF;
+    --btn-bg: #{$strohm-primary};
+    --btn-border-color: #{$strohm-primary};
+    --btn-hover-color: #FFFFFF;
+    --btn-hover-bg: #{darken($strohm-primary, 8%)};
+    --btn-hover-border-color: #{darken($strohm-primary, 10%)};
+    --btn-focus-shadow-rgb: 61, 70, 217;
+    --btn-active-color: #FFFFFF;
+    --btn-active-bg: #{darken($strohm-primary, 10%)};
+    --btn-active-border-color: #{darken($strohm-primary, 12%)};
+    --btn-active-shadow: inset 0 3px 5px rgba(0, 0, 0, 0.125);
+    --btn-disabled-color: #FFFFFF;
+    --btn-disabled-bg: #{$strohm-primary-disabled};
+    --btn-disabled-border-color: #{$strohm-primary-disabled};
+}
+
 // Override the primary button with custom design
 .btn-primary {
     font-size: 1.25rem;
@@ -55,6 +76,8 @@ button.accordion-button:focus-visible {
 
 // Form Submit Button (Odoo specific)
 // ----------------------------------------------------------------------------
+// CSS variables and base styles are shared via the combined block above.
+// Additional layout properties mirrored from .btn-primary:
 .modern .XItem.XSubmit.btnSubmit {
     @extend .btn-primary;
 }
