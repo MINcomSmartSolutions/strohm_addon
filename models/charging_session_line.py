@@ -4,7 +4,7 @@ from odoo import models, fields, api
 
 _logger = logging.getLogger(__name__)
 
-_UOM_ENERGY_CATEG = 'strohm_addon.uom_categ_energy'
+_UOM_ENERGY_CATEG = 'uom.product_uom_categ_energy'
 
 
 class SaleOrderLine(models.Model):

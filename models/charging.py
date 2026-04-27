@@ -5,8 +5,8 @@ from odoo.exceptions import UserError, ValidationError
 
 _logger = logging.getLogger(__name__)
 
-_UOM_ENERGY_CATEG = 'strohm_addon.uom_categ_energy'
-_UOM_KWH = 'strohm_addon.product_uom_kwh'
+_UOM_ENERGY_CATEG = 'uom.product_uom_categ_energy'
+_UOM_KWH = 'uom.product_uom_kwh'
 
 
 class ChargingSessionInvoice(models.TransientModel):
@@ -208,7 +208,7 @@ class ChargingSessionInvoice(models.TransientModel):
             line = energy_lines[0]
 
             # Check if already migrated (skip if data exists)
-            if line.session_start or line.session_end:
+            if line.session_start or line.session_end: #TODO: 'or' or 'and'?
                 continue
 
             # Only proceed if we have exactly one energy line (or one product line if category not found)
@@ -251,6 +251,139 @@ class ChargingSessionInvoice(models.TransientModel):
             'invoices_migrated': migrated_count,
             'lines_updated': line_count,
         }
+
+    @api.model
+    def migrate_uom_to_official(self):
+        """
+        One-time migration: reassign all sale order lines, invoice lines, and products
+        from any custom strohm_addon kWh UoM to the official Odoo 18 one
+        (uom.product_uom_kwh), then delete the orphaned custom records.
+
+        Handles both xmlid-registered and programmatically-created duplicate UoMs.
+        Safe to call multiple times — skips steps that are already done.
+        """
+        cr = self.env.cr
+        result = {'products_fixed': 0, 'so_lines_fixed': 0, 'inv_lines_fixed': 0, 'cleaned_up': []}
+
+        official_uom = self.env.ref('uom.product_uom_kwh', raise_if_not_found=False)
+        official_categ = self.env.ref('uom.product_uom_categ_energy', raise_if_not_found=False)
+
+        if not official_uom or not official_categ:
+            msg = 'Official Odoo 18 energy UoM not found — is the uom module installed?'
+            _logger.error(msg)
+            result['error'] = msg
+            return result
+
+        _logger.info(f"Official kWh UoM id={official_uom.id}, official Energy category id={official_categ.id}")
+
+        # Step 1: Find ALL kWh UoMs that are NOT the official one (by name match, case-insensitive)
+        # name is jsonb in Odoo 18, so check all language values
+        cr.execute(
+            "SELECT id, category_id FROM uom_uom "
+            "WHERE id != %s AND EXISTS ("
+            "  SELECT 1 FROM jsonb_each_text(name) AS kv WHERE LOWER(kv.value) = 'kwh'"
+            ")",
+            (official_uom.id,),
+        )
+        duplicate_uom_rows = cr.fetchall()
+        duplicate_uom_ids = [r[0] for r in duplicate_uom_rows]
+
+        # Also find custom UoM ids registered via ir_model_data (in case name differs)
+        custom_xmlid_names = [
+            'product_uom_kwh', 'str_product_uom_kwh',
+            'uom_categ_energy', 'str_uom_categ_energy',
+        ]
+        cr.execute(
+            "SELECT name, res_id, model FROM ir_model_data "
+            "WHERE module = 'strohm_addon' AND name = ANY(%s)",
+            (custom_xmlid_names,),
+        )
+        xmlid_rows = cr.fetchall()
+        xmlid_uom_ids = [r[1] for r in xmlid_rows if r[2] == 'uom.uom' and r[1] != official_uom.id]
+        xmlid_categ_ids = [r[1] for r in xmlid_rows if r[2] == 'uom.category' and r[1] != official_categ.id]
+
+        # Merge: all non-official kWh UoM ids (from name search + xmlid search)
+        all_custom_uom_ids = list(set(duplicate_uom_ids + xmlid_uom_ids))
+
+        # Also find duplicate Energy categories by name (case-insensitive)
+        # name is jsonb in Odoo 18
+        cr.execute(
+            "SELECT id FROM uom_category "
+            "WHERE id != %s AND EXISTS ("
+            "  SELECT 1 FROM jsonb_each_text(name) AS kv WHERE LOWER(kv.value) = 'energy'"
+            ")",
+            (official_categ.id,),
+        )
+        duplicate_categ_ids = [r[0] for r in cr.fetchall()]
+        all_custom_categ_ids = list(set(duplicate_categ_ids + xmlid_categ_ids))
+
+        _logger.info(f"Found custom UoM ids to migrate: {all_custom_uom_ids}")
+        _logger.info(f"Found custom category ids to migrate: {all_custom_categ_ids}")
+
+        # Step 2: Reassign all FKs from custom UoMs → official
+        if all_custom_uom_ids:
+            updates = [
+                ('product_template', 'uom_id'),
+                ('product_template', 'uom_po_id'),
+                ('sale_order_line', 'product_uom'),
+                ('account_move_line', 'product_uom_id'),
+            ]
+            for table, column in updates:
+                cr.execute(
+                    f'UPDATE "{table}" SET "{column}" = %s WHERE "{column}" = ANY(%s)',
+                    (official_uom.id, all_custom_uom_ids),
+                )
+                if cr.rowcount:
+                    _logger.info(f"Reassigned {cr.rowcount} rows in {table}.{column} → official kWh (id={official_uom.id})")
+                    if 'product' in table:
+                        result['products_fixed'] += cr.rowcount
+                    elif 'sale' in table:
+                        result['so_lines_fixed'] += cr.rowcount
+                    elif 'account' in table:
+                        result['inv_lines_fixed'] += cr.rowcount
+
+            cr.commit()
+            _logger.info("Committed FK reassignment")
+
+        # Step 3: Reassign any UoMs still in custom categories to official category
+        if all_custom_categ_ids:
+            cr.execute(
+                'UPDATE uom_uom SET category_id = %s WHERE category_id = ANY(%s)',
+                (official_categ.id, all_custom_categ_ids),
+            )
+            if cr.rowcount:
+                _logger.info(f"Reassigned {cr.rowcount} UoMs to official energy category")
+            cr.commit()
+
+        # Step 4: Delete orphaned custom UoM records
+        if all_custom_uom_ids:
+            cr.execute('DELETE FROM uom_uom WHERE id = ANY(%s)', (all_custom_uom_ids,))
+            if cr.rowcount:
+                _logger.info(f"Deleted {cr.rowcount} custom UoM records")
+                result['cleaned_up'].append(f'{cr.rowcount} uom.uom')
+            cr.commit()
+
+        # Step 5: Delete orphaned custom category records
+        if all_custom_categ_ids:
+            cr.execute('DELETE FROM uom_category WHERE id = ANY(%s)', (all_custom_categ_ids,))
+            if cr.rowcount:
+                _logger.info(f"Deleted {cr.rowcount} custom UoM category records")
+                result['cleaned_up'].append(f'{cr.rowcount} uom.category')
+            cr.commit()
+
+        # Step 6: Clean up ir_model_data entries
+        if xmlid_rows:
+            cr.execute(
+                "DELETE FROM ir_model_data WHERE module = 'strohm_addon' AND name = ANY(%s)",
+                (custom_xmlid_names,),
+            )
+            if cr.rowcount:
+                _logger.info(f"Cleaned up {cr.rowcount} ir_model_data entries")
+                result['cleaned_up'].append(f'{cr.rowcount} ir_model_data')
+            cr.commit()
+
+        _logger.info(f"UoM migration to official complete: {result}")
+        return result
 
     @api.model
     def ensure_standard_products(self):

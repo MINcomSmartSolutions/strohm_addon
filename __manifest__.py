@@ -25,7 +25,6 @@
         'sale_management'
     ],
     'data': [
-        'data/uom_data.xml',
         'views/portal_assets.xml',
         'security/ir.model.access.csv',
         'data/user_automations.xml',

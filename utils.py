@@ -151,6 +151,13 @@ def strohm_init_parameters(env):
         _logger.warning("Failed to migrate invoice session data: %s", e)
 
 
+    try:
+        _logger.info("changing uoms...")
+        env['charging.session.invoice'].migrate_uom_to_official()
+    except Exception as e:
+        _logger.warning("Failed to migrate UOMs: %s", e)
+        
+
 def ensure_standard_products(env):
     """
     Ensure standard charging products exist in the system.
