@@ -161,6 +161,14 @@
                     <span t-else="" class="text-muted">-</span>
                 </td>
             </xpath>
+
+            <xpath expr="//div[@id='payment_term']" position="after">
+                <div class="row mt-4">
+                    <div class="col-12">
+                        <span>Gemäß § 19 UStG wird keine Umsatzsteuer berechnet.</span>
+                    </div>
+                </div>
+            </xpath>
         </template>
         
         <!-- Inherit the tax totals template to replace "USt" from tax group names -->
