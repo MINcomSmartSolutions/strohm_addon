@@ -16,6 +16,7 @@
     </template>
 
     <!-- Set default title for all portal pages -->
+    <!--TODO: Needs to be dynamic    -->
     <template id="custom_portal_layout_title" inherit_id="portal.portal_layout" name="Custom Portal Layout Title">
         <xpath expr="//t[@t-call='portal.frontend_layout']" position="inside">
             <t t-set="title" t-value="title or 'Portal - HM Laden'"/>
@@ -208,5 +209,15 @@
     <template id="remove_invoice_sending_method" inherit_id="portal.portal_my_details_fields" name="Remove Invoice Sending Method">
         <xpath expr="//div[hasclass('row')][.//select[@name='invoice_sending_method']]" position="replace">
         </xpath>
+    </template>
+
+    <!-- Remove salesperson/purchase representative section from invoice page -->
+    <template id="remove_salesperson_section" inherit_id="account.portal_invoice_page" name="Remove Salesperson Section">
+        <xpath expr="//div[@t-if='invoice.invoice_user_id'][@class='flex-grow-1']" position="replace"/>
+    </template>
+
+    <!-- Remove "Your contact" section from sale order portal page -->
+    <template id="remove_sale_order_contact_section" inherit_id="sale.sale_order_portal_template" name="Remove Sale Order Contact Section">
+        <xpath expr="//div[@t-if='sale_order.user_id']" position="replace"/>
     </template>
 </odoo>

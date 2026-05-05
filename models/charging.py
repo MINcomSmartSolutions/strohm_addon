@@ -401,7 +401,7 @@ class ChargingSessionInvoice(models.TransientModel):
             {
                 'name': 'Ladesitzung',
                 'sku': 'standard_charging',
-                'base_price': 0.35,
+                'base_price': 0.30,
                 # list_price is set to base_price by default and can be set changed with price_unit when creating invoice
             },
         ]

@@ -14,6 +14,7 @@ $strohm-primary-disabled: #3D46D950;
 // Override Bootstrap 5 CSS custom properties for primary buttons
 .btn-fill-primary,
 .btn-primary,
+.btn:disabled, .btn.disabled, fieldset:disabled .btn,
 .modern .XItem.XSubmit.btnSubmit {
     --btn-color: #FFFFFF;
     --btn-bg: #{$strohm-primary};
