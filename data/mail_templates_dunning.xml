@@ -1,0 +1,338 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <data noupdate="1">
+
+        <!-- ========== Mahnstufe 1: Friendly Payment Reminder ========== -->
+        <record id="email_template_dunning_m1" model="mail.template">
+            <field name="name">Mahnung - Zahlungserinnerung (Stufe 1)</field>
+            <field name="model_id" ref="account.model_account_move"/>
+            <field name="subject">Zahlungserinnerung zu Ihrer Rechnung {{ object.name }}</field>
+            <field name="email_from">{{ object.company_id.name }} &lt;no-reply.laden@hm.edu&gt;</field>
+            <field name="email_to">{{ object.partner_id.email }}</field>
+            <field name="reply_to">&lt;abrechnung.laden@hm.edu&gt;</field>
+            <field name="lang">{{ object.partner_id.lang }}</field>
+            <field name="description">Sent automatically when an invoice reaches Mahnstufe 1 (30 days overdue). Friendly reminder.</field>
+            <field name="auto_delete" eval="False"/>
+            <field name="body_html" type="html">
+                <div style="margin: 0; padding: 0; font-family: 'Segoe UI','Roboto','Lucida Grande', 'Verdana', 'Arial', sans-serif; font-size: 14px; color: #333;">
+                    <table border="0" cellpadding="0" cellspacing="0" style="width: 100%; background-color: #f9f9f9; padding: 20px;">
+                        <tr>
+                            <td align="center">
+                                <table border="0" cellpadding="0" cellspacing="0" style="max-width: 600px; background-color: white; overflow: hidden; color: #161616; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+                                    <!-- Body -->
+                                    <tr>
+                                        <td style="padding: 30px;">
+                                            <p style="margin: 0 0 15px; font-size: 16px;">
+                                                Sehr geehrte*r <t t-out="object.partner_id.name or 'Kund*in'"/>,
+                                            </p>
+
+                                            <p style="margin: 0 0 15px;">
+                                                wir möchten Sie freundlich daran erinnern, dass die folgende Rechnung noch offen ist und das Zahlungsziel überschritten wurde.
+                                            </p>
+
+                                            <!-- Invoice Details -->
+                                            <div style="background-color: #f0f7ff; border-left: 4px solid #667eea; padding: 15px; margin: 20px 0;">
+                                                <h3 style="margin: 0 0 10px; color: #667eea; font-size: 18px;">
+                                                    Rechnungsdetails
+                                                </h3>
+                                                <p style="margin: 5px 0;">
+                                                    <strong>Rechnungsnummer:</strong> <t t-out="object.name"/>
+                                                </p>
+                                                <p style="margin: 5px 0;">
+                                                    <strong>Rechnungsdatum:</strong> <t t-out="object.invoice_date" t-options="{'widget': 'date', 'format': 'dd.MM.yyyy'}"/>
+                                                </p>
+                                                <p style="margin: 5px 0;">
+                                                    <strong>Fälligkeitsdatum:</strong> <t t-out="object.invoice_date_due" t-options="{'widget': 'date', 'format': 'dd.MM.yyyy'}"/>
+                                                </p>
+                                            </div>
+
+                                            <!-- Amount Due -->
+                                            <div style="background-color: #fff9e6; border-left: 4px solid #ffa500; padding: 15px; margin: 20px 0;">
+                                                <h3 style="margin: 0 0 10px; color: #ffa500; font-size: 18px;">
+                                                    Offener Betrag
+                                                </h3>
+                                                <p style="margin: 15px 0 5px; font-size: 20px; color: #333;">
+                                                    <strong>Ausstehend:</strong>
+                                                    <span style="font-size: 24px;"><t t-out="object.amount_residual" t-options="{'widget': 'monetary', 'display_currency': object.currency_id}"/></span>
+                                                </p>
+                                            </div>
+
+                                            <p style="margin: 20px 0 15px;">
+                                                Bitte begleichen Sie den offenen Betrag zeitnah über Ihr
+                                                <a href="https://laden.hm.edu/my/invoices">Nutzerportal</a>.
+                                            </p>
+
+                                            <p style="margin: 0 0 15px;">
+                                                Sollte sich Ihre Zahlung mit dieser Erinnerung gekreuzt haben, betrachten Sie diese Nachricht bitte als gegenstandslos.
+                                            </p>
+
+                                            <p style="margin: 20px 0 0; font-size: 13px; color: #666;">
+                                                Bei Fragen zur Rechnung stehen wir Ihnen gerne zur Verfügung. Bitte antworten Sie nicht direkt auf diese E-Mail.
+                                            </p>
+                                        </td>
+                                    </tr>
+                                    <!-- Footer -->
+                                    <tr>
+                                        <td style="background-color: #f5f5f5; padding: 20px; text-align: center; border-top: 1px solid #e0e0e0;">
+                                            <p style="margin: 0 0 10px; color: #666; font-size: 12px;">
+                                                <t t-out="object.company_id.name or ''"/><br/>
+                                                Administration Ladeservice<br/>
+                                                info.laden@hm.edu<br/>
+                                                Bei Fragen zu Rechnungen: abrechnung.laden@hm.edu
+                                            </p>
+                                        </td>
+                                    </tr>
+                                </table>
+                            </td>
+                        </tr>
+                    </table>
+                </div>
+            </field>
+        </record>
+
+        <!-- ========== Mahnstufe 2: Account Disconnection Notice ========== -->
+        <record id="email_template_dunning_m2" model="mail.template">
+            <field name="name">Mahnung - Kontosperrung (Stufe 2)</field>
+            <field name="model_id" ref="account.model_account_move"/>
+            <field name="subject">Wichtig: Ihr Ladekonto wurde gesperrt - Rechnung {{ object.name }}</field>
+            <field name="email_from">{{ object.company_id.name }} &lt;no-reply.laden@hm.edu&gt;</field>
+            <field name="email_to">{{ object.partner_id.email }}</field>
+            <field name="reply_to">&lt;abrechnung.laden@hm.edu&gt;</field>
+            <field name="lang">{{ object.partner_id.lang }}</field>
+            <field name="description">Sent automatically when an invoice reaches Mahnstufe 2 (60 days overdue). Account disconnection notice.</field>
+            <field name="auto_delete" eval="False"/>
+            <field name="body_html" type="html">
+                <div style="margin: 0; padding: 0; font-family: 'Segoe UI','Roboto','Lucida Grande', 'Verdana', 'Arial', sans-serif; font-size: 14px; color: #333;">
+                    <table border="0" cellpadding="0" cellspacing="0" style="width: 100%; background-color: #f9f9f9; padding: 20px;">
+                        <tr>
+                            <td align="center">
+                                <table border="0" cellpadding="0" cellspacing="0" style="max-width: 600px; background-color: white; overflow: hidden; color: #161616; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+                                    <!-- Body -->
+                                    <tr>
+                                        <td style="padding: 30px;">
+                                            <p style="margin: 0 0 15px; font-size: 16px;">
+                                                Sehr geehrte*r <t t-out="object.partner_id.name or 'Kund*in'"/>,
+                                            </p>
+
+                                            <p style="margin: 0 0 15px;">
+                                                trotz unserer vorherigen Erinnerung ist die nachfolgende Rechnung weiterhin unbezahlt. Aufgrund des anhaltenden Zahlungsverzugs wurde Ihr Ladekonto <strong>gesperrt</strong>.
+                                            </p>
+
+                                            <p style="margin: 0 0 15px;">
+                                                <strong>Das bedeutet:</strong> Sie können Ihr Fahrzeug derzeit nicht an den Ladestationen der Hochschule München laden.
+                                            </p>
+
+                                            <!-- Invoice Details -->
+                                            <div style="background-color: #f0f7ff; border-left: 4px solid #667eea; padding: 15px; margin: 20px 0;">
+                                                <h3 style="margin: 0 0 10px; color: #667eea; font-size: 18px;">
+                                                    Rechnungsdetails
+                                                </h3>
+                                                <p style="margin: 5px 0;">
+                                                    <strong>Rechnungsnummer:</strong> <t t-out="object.name"/>
+                                                </p>
+                                                <p style="margin: 5px 0;">
+                                                    <strong>Rechnungsdatum:</strong> <t t-out="object.invoice_date" t-options="{'widget': 'date', 'format': 'dd.MM.yyyy'}"/>
+                                                </p>
+                                                <p style="margin: 5px 0;">
+                                                    <strong>Fälligkeitsdatum:</strong> <t t-out="object.invoice_date_due" t-options="{'widget': 'date', 'format': 'dd.MM.yyyy'}"/>
+                                                </p>
+                                            </div>
+
+                                            <!-- Amount Due -->
+                                            <div style="background-color: #fff9e6; border-left: 4px solid #ffa500; padding: 15px; margin: 20px 0;">
+                                                <h3 style="margin: 0 0 10px; color: #ffa500; font-size: 18px;">
+                                                    Offener Betrag
+                                                </h3>
+                                                <p style="margin: 15px 0 5px; font-size: 20px; color: #333;">
+                                                    <strong>Ausstehend:</strong>
+                                                    <span style="font-size: 24px;"><t t-out="object.amount_residual" t-options="{'widget': 'monetary', 'display_currency': object.currency_id}"/></span>
+                                                </p>
+                                            </div>
+
+                                            <!-- Reactivation Info -->
+                                            <div style="background-color: #e8f5e9; border-left: 4px solid #4caf50; padding: 15px; margin: 20px 0;">
+                                                <h3 style="margin: 0 0 10px; color: #4caf50; font-size: 18px;">
+                                                    Wie wird mein Konto wieder aktiviert?
+                                                </h3>
+                                                <p style="margin: 5px 0;">
+                                                    Sobald der offene Betrag beglichen ist, wird Ihr Ladekonto automatisch wieder freigeschaltet. Bitte bezahlen Sie die ausstehende Rechnung über Ihr
+                                                    <a href="https://laden.hm.edu/my/invoices">Nutzerportal</a>.
+                                                </p>
+                                            </div>
+
+                                            <p style="margin: 20px 0 0; font-size: 13px; color: #666;">
+                                                Bei Fragen zur Rechnung oder zur Sperrung stehen wir Ihnen gerne zur Verfügung. Bitte antworten Sie nicht direkt auf diese E-Mail.
+                                            </p>
+                                        </td>
+                                    </tr>
+                                    <!-- Footer -->
+                                    <tr>
+                                        <td style="background-color: #f5f5f5; padding: 20px; text-align: center; border-top: 1px solid #e0e0e0;">
+                                            <p style="margin: 0 0 10px; color: #666; font-size: 12px;">
+                                                <t t-out="object.company_id.name or ''"/><br/>
+                                                Administration Ladeservice<br/>
+                                                info.laden@hm.edu<br/>
+                                                Bei Fragen zu Rechnungen: abrechnung.laden@hm.edu
+                                            </p>
+                                        </td>
+                                    </tr>
+                                </table>
+                            </td>
+                        </tr>
+                    </table>
+                </div>
+            </field>
+        </record>
+
+        <!-- ========== Mahnstufe 3: Final Notice - Finance Handover ========== -->
+        <record id="email_template_dunning_m3" model="mail.template">
+            <field name="name">Mahnung - Übergabe an Finanzen (Stufe 3)</field>
+            <field name="model_id" ref="account.model_account_move"/>
+            <field name="subject">Letzte Mahnung: Rechnung {{ object.name }} wird an die Finanzverwaltung übergeben</field>
+            <field name="email_from">{{ object.company_id.name }} &lt;no-reply.laden@hm.edu&gt;</field>
+            <field name="email_to">{{ object.partner_id.email }}</field>
+            <field name="reply_to">&lt;abrechnung.laden@hm.edu&gt;</field>
+            <field name="lang">{{ object.partner_id.lang }}</field>
+            <field name="description">Sent automatically when an invoice reaches Mahnstufe 3 (90 days overdue). Final notice before finance handover.</field>
+            <field name="auto_delete" eval="False"/>
+            <field name="body_html" type="html">
+                <div style="margin: 0; padding: 0; font-family: 'Segoe UI','Roboto','Lucida Grande', 'Verdana', 'Arial', sans-serif; font-size: 14px; color: #333;">
+                    <table border="0" cellpadding="0" cellspacing="0" style="width: 100%; background-color: #f9f9f9; padding: 20px;">
+                        <tr>
+                            <td align="center">
+                                <table border="0" cellpadding="0" cellspacing="0" style="max-width: 600px; background-color: white; overflow: hidden; color: #161616; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+                                    <!-- Body -->
+                                    <tr>
+                                        <td style="padding: 30px;">
+                                            <p style="margin: 0 0 15px; font-size: 16px;">
+                                                Sehr geehrte*r <t t-out="object.partner_id.name or 'Kund*in'"/>,
+                                            </p>
+
+                                            <p style="margin: 0 0 15px;">
+                                                trotz mehrfacher Mahnungen ist die folgende Rechnung weiterhin unbezahlt. Der Vorgang wird daher an die Finanzverwaltung übergeben.
+                                            </p>
+
+                                            <p style="margin: 0 0 15px;">
+                                                <strong>Das bedeutet:</strong>
+                                            </p>
+                                            <ul style="margin: 0 0 15px; padding-left: 20px;">
+                                                <li>Ihr Ladekonto bleibt gesperrt.</li>
+                                                <li>Eine Bezahlung über das Portal ist nicht mehr möglich.</li>
+                                                <li>Die Begleichung der offenen Forderung erfolgt über die Finanzverwaltung.</li>
+                                            </ul>
+
+                                            <!-- Invoice Details -->
+                                            <div style="background-color: #f0f7ff; border-left: 4px solid #667eea; padding: 15px; margin: 20px 0;">
+                                                <h3 style="margin: 0 0 10px; color: #667eea; font-size: 18px;">
+                                                    Rechnungsdetails
+                                                </h3>
+                                                <p style="margin: 5px 0;">
+                                                    <strong>Rechnungsnummer:</strong> <t t-out="object.name"/>
+                                                </p>
+                                                <p style="margin: 5px 0;">
+                                                    <strong>Rechnungsdatum:</strong> <t t-out="object.invoice_date" t-options="{'widget': 'date', 'format': 'dd.MM.yyyy'}"/>
+                                                </p>
+                                                <p style="margin: 5px 0;">
+                                                    <strong>Fälligkeitsdatum:</strong> <t t-out="object.invoice_date_due" t-options="{'widget': 'date', 'format': 'dd.MM.yyyy'}"/>
+                                                </p>
+                                            </div>
+
+                                            <!-- Amount Due -->
+                                            <div style="background-color: #fce4ec; border-left: 4px solid #e53935; padding: 15px; margin: 20px 0;">
+                                                <h3 style="margin: 0 0 10px; color: #e53935; font-size: 18px;">
+                                                    Offener Betrag
+                                                </h3>
+                                                <p style="margin: 15px 0 5px; font-size: 20px; color: #333;">
+                                                    <strong>Ausstehend:</strong>
+                                                    <span style="font-size: 24px;"><t t-out="object.amount_residual" t-options="{'widget': 'monetary', 'display_currency': object.currency_id}"/></span>
+                                                </p>
+                                            </div>
+
+                                            <p style="margin: 20px 0 15px;">
+                                                Nach Begleichung des offenen Betrages bei der Finanzverwaltung wird Ihr Konto automatisch wieder freigeschaltet.
+                                            </p>
+
+                                            <p style="margin: 20px 0 0; font-size: 13px; color: #666;">
+                                                Bei Fragen wenden Sie sich bitte an die Finanzverwaltung. Bitte antworten Sie nicht direkt auf diese E-Mail.
+                                            </p>
+                                        </td>
+                                    </tr>
+                                    <!-- Footer -->
+                                    <tr>
+                                        <td style="background-color: #f5f5f5; padding: 20px; text-align: center; border-top: 1px solid #e0e0e0;">
+                                            <p style="margin: 0 0 10px; color: #666; font-size: 12px;">
+                                                <t t-out="object.company_id.name or ''"/><br/>
+                                                Administration Ladeservice<br/>
+                                                info.laden@hm.edu<br/>
+                                                Bei Fragen zu Rechnungen: abrechnung.laden@hm.edu
+                                            </p>
+                                        </td>
+                                    </tr>
+                                </table>
+                            </td>
+                        </tr>
+                    </table>
+                </div>
+            </field>
+        </record>
+
+        <!-- ========== Internal: Finance Notification for M3 Handover ========== -->
+        <record id="email_template_dunning_m3_finance_notification" model="mail.template">
+            <field name="name">Mahnung - Interne Benachrichtigung Finanzen (Stufe 3)</field>
+            <field name="model_id" ref="base.model_res_company"/>
+            <field name="subject">Mahnwesen: Neue Übergaben an Finanzverwaltung</field>
+            <field name="email_from">{{ object.name }} &lt;no-reply.laden@hm.edu&gt;</field>
+            <field name="email_to">abrechnung.laden@hm.edu</field>
+            <field name="description">Internal notification sent to finance team when invoices reach Mahnstufe 3.</field>
+            <field name="auto_delete" eval="False"/>
+            <field name="body_html" type="html">
+                <div style="margin: 0; padding: 0; font-family: 'Segoe UI','Roboto','Lucida Grande', 'Verdana', 'Arial', sans-serif; font-size: 14px; color: #333;">
+                    <table border="0" cellpadding="0" cellspacing="0" style="width: 100%; background-color: #f9f9f9; padding: 20px;">
+                        <tr>
+                            <td align="center">
+                                <table border="0" cellpadding="0" cellspacing="0" style="max-width: 600px; background-color: white; overflow: hidden; color: #161616; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+                                    <!-- Body -->
+                                    <tr>
+                                        <td style="padding: 30px;">
+                                            <p style="margin: 0 0 15px; font-size: 16px;">
+                                                Interne Benachrichtigung - Mahnwesen
+                                            </p>
+
+                                            <p style="margin: 0 0 15px;">
+                                                Die folgenden Vorgänge haben heute Mahnstufe 3 erreicht und werden zur Bearbeitung an die Finanzverwaltung übergeben. Die betroffenen Kunden können nicht mehr über das Portal bezahlen.
+                                            </p>
+
+                                            <div style="background-color: #fce4ec; border-left: 4px solid #e53935; padding: 15px; margin: 20px 0;">
+                                                <h3 style="margin: 0 0 10px; color: #e53935; font-size: 18px;">
+                                                    Aktion erforderlich
+                                                </h3>
+                                                <p style="margin: 5px 0;">
+                                                    Bitte prüfen Sie die betroffenen Rechnungen im Odoo-Backend unter:<br/>
+                                                    <strong>Rechnungsstellung → Rechnungen</strong> (Filter: Mahnstufe = 3)
+                                                </p>
+                                            </div>
+
+                                            <p style="margin: 20px 0 15px;">
+                                                Nach Zahlungseingang bitte die Zahlung über "Zahlung erfassen" auf der jeweiligen Rechnung verbuchen. Das Konto wird dann automatisch wieder freigeschaltet.
+                                            </p>
+                                        </td>
+                                    </tr>
+                                    <!-- Footer -->
+                                    <tr>
+                                        <td style="background-color: #f5f5f5; padding: 20px; text-align: center; border-top: 1px solid #e0e0e0;">
+                                            <p style="margin: 0 0 10px; color: #666; font-size: 12px;">
+                                                <t t-out="object.name or ''"/><br/>
+                                                Automatische Benachrichtigung - Mahnwesen Ladeservice
+                                            </p>
+                                        </td>
+                                    </tr>
+                                </table>
+                            </td>
+                        </tr>
+                    </table>
+                </div>
+            </field>
+        </record>
+
+    </data>
+</odoo>

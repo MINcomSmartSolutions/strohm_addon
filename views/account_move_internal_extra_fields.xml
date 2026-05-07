@@ -13,6 +13,12 @@
 					<field name="session_end"
 					       string="Ende der Ladesession"
 					       readonly="state != 'draft'"/>
+					<field name="dunning_level"
+					       string="Mahnstufe"
+					       readonly="1"/>
+					<field name="dunning_level_date"
+					       string="Mahnstufe seit"
+					       readonly="1"/>
 				</xpath>
 			</field>
 		</record>
@@ -50,6 +56,11 @@
 					<field name="session_end"
 					       string="Ende der Ladesession"
 					       readonly="state != 'draft'"/>
+					<field name="dunning_level"
+					       string="Mahnstufe"
+					       optional="show"
+					       decoration-warning="dunning_level == '1'"
+					       decoration-danger="dunning_level in ('2', '3')"/>
 				</xpath>
 			</field>
 		</record>

@@ -9,6 +9,9 @@ import os
 from typing import Optional, Dict, Any, Tuple
 
 import requests
+from werkzeug import urls
+
+from odoo.exceptions import ValidationError
 
 _logger = logging.getLogger(__name__)
 
@@ -35,7 +38,7 @@ class BackendService:
         """Get external backend URL for client-facing operations."""
         if not self.external_url:
             _logger.error("BACKEND_EXTERNAL_URL not configured")
-            return ""
+            raise ValidationError("BACKEND_EXTERNAL_URL not configured")
         return self.external_url
 
     def _get_default_headers(self) -> Dict[str, str]:
@@ -81,8 +84,8 @@ class BackendService:
         headers: Optional[Dict[str, str]] = None,
         timeout: Optional[int] = None
     ) -> Tuple[bool, Optional[Dict], Optional[str]]:
-        """Make POST request to internal backend API."""
-        url = f"{self._get_internal_url()}{endpoint}"
+
+        url = urls.url_join(self._get_internal_url(), endpoint)
         return self._execute_request('POST', url, data=data, headers=headers, timeout=timeout)
 
     def put_internal(
@@ -92,8 +95,8 @@ class BackendService:
         headers: Optional[Dict[str, str]] = None,
         timeout: Optional[int] = None
     ) -> Tuple[bool, Optional[Dict], Optional[str]]:
-        """Make PUT request to internal backend API."""
-        url = f"{self._get_internal_url()}{endpoint}"
+
+        url = urls.url_join(self._get_internal_url(), endpoint)
         return self._execute_request('PUT', url, data=data, headers=headers, timeout=timeout)
 
     def patch_internal(
@@ -103,8 +106,8 @@ class BackendService:
         headers: Optional[Dict[str, str]] = None,
         timeout: Optional[int] = None
     ) -> Tuple[bool, Optional[Dict], Optional[str]]:
-        """Make PATCH request to internal backend API."""
-        url = f"{self._get_internal_url()}{endpoint}"
+
+        url = urls.url_join(self._get_internal_url(), endpoint)
         return self._execute_request('PATCH', url, data=data, headers=headers, timeout=timeout)
 
     def delete_internal(
@@ -114,8 +117,8 @@ class BackendService:
         headers: Optional[Dict[str, str]] = None,
         timeout: Optional[int] = None
     ) -> Tuple[bool, Optional[Dict], Optional[str]]:
-        """Make DELETE request to internal backend API."""
-        url = f"{self._get_internal_url()}{endpoint}"
+
+        url = urls.url_join(self._get_internal_url(), endpoint)
         return self._execute_request('DELETE', url, data=data, headers=headers, timeout=timeout)
 
     def post_external(
@@ -126,11 +129,8 @@ class BackendService:
         timeout: Optional[int] = None
     ) -> Tuple[bool, Optional[Dict], Optional[str]]:
         """Make POST request to external backend API."""
-        external_url = self._get_external_url()
-        if not external_url:
-            return (False, None, "BACKEND_EXTERNAL_URL not configured")
+        url = urls.url_join(self._get_external_url(), endpoint)
 
-        url = f"{external_url}{endpoint}"
         return self._execute_request('POST', url, data=data, headers=headers, timeout=timeout)
 
     def get_external(
@@ -141,11 +141,8 @@ class BackendService:
         timeout: Optional[int] = None
     ) -> Tuple[bool, Optional[Dict], Optional[str]]:
         """Make GET request to external backend API."""
-        external_url = self._get_external_url()
-        if not external_url:
-            return (False, None, "BACKEND_EXTERNAL_URL not configured")
+        url = urls.url_join(self._get_external_url(), endpoint)
 
-        url = f"{external_url}{endpoint}"
         return self._execute_request('GET', url, params=params, headers=headers, timeout=timeout)
 
     def get_internal(
@@ -156,7 +153,7 @@ class BackendService:
         timeout: Optional[int] = None
     ) -> Tuple[bool, Optional[Dict], Optional[str]]:
         """Make GET request to internal backend API."""
-        url = f"{self._get_internal_url()}{endpoint}"
+        url = urls.url_join(self._get_internal_url(), endpoint)
         return self._execute_request('GET', url, params=params, headers=headers, timeout=timeout)
 
     def _execute_post(
@@ -168,16 +165,6 @@ class BackendService:
     ) -> Tuple[bool, Optional[Dict], Optional[str]]:
         """Deprecated: Use _execute_request instead."""
         return self._execute_request('POST', url, data=data, headers=headers, timeout=timeout)
-
-    def _execute_get(
-        self,
-        url: str,
-        params: Optional[Dict[str, Any]] = None,
-        headers: Optional[Dict[str, str]] = None,
-        timeout: Optional[int] = None
-    ) -> Tuple[bool, Optional[Dict], Optional[str]]:
-        """Deprecated: Use _execute_request instead."""
-        return self._execute_request('GET', url, params=params, headers=headers, timeout=timeout)
 
     def _execute_request(
         self,
@@ -289,6 +276,77 @@ class BackendService:
             _logger.error(f"Sync event failed: {error}")
 
         return success
+
+
+    def suspend_user(
+        self,
+        partner_id: int,
+        partner_name: str,
+    ) -> Tuple[bool, Optional[Dict], Optional[str]]:
+        """
+        Suspend a user's charging account in Steve/Backend (Mahnstufe 2).
+        Called when a customer reaches dunning level 2.
+
+        Args:
+            partner_id: Odoo partner ID
+            partner_name: Partner name for logging
+
+        Returns:
+            Tuple of (success, response_data, error_message)
+        """
+        payload = {
+            'partner_id': partner_id,
+            'partner_name': partner_name,
+            'reason': 'dunning_level_2',
+            'timestamp': datetime.datetime.now().isoformat(),
+        }
+
+        _logger.info(f"Suspending charging account for partner {partner_name} (ID: {partner_id})")
+
+        # Endpoint handled by POST /internal/user/suspend-charging in odoo.js controller
+        success, response, error = self.post_internal(
+            '/internal/user/suspend-charging', payload
+        )
+
+        if not success:
+            _logger.error(f"Failed to suspend user {partner_name}: {error}")
+
+        return success, response, error
+
+    def reactivate_user(
+        self,
+        partner_id: int,
+        partner_name: str,
+    ) -> Tuple[bool, Optional[Dict], Optional[str]]:
+        """
+        Reactivate a user's charging account in Steve/Backend.
+        Called when a suspended customer has paid all overdue invoices.
+
+        Args:
+            partner_id: Odoo partner ID
+            partner_name: Partner name for logging
+
+        Returns:
+            Tuple of (success, response_data, error_message)
+        """
+        payload = {
+            'partner_id': partner_id,
+            'partner_name': partner_name,
+            'reason': 'dunning_resolved',
+            'timestamp': datetime.datetime.now().isoformat(),
+        }
+
+        _logger.info(f"Reactivating charging account for partner {partner_name} (ID: {partner_id})")
+
+        # Endpoint handled by POST /internal/user/reactivate-charging in odoo.js controller
+        success, response, error = self.post_internal(
+            '/internal/user/reactivate-charging', payload
+        )
+
+        if not success:
+            _logger.error(f"Failed to reactivate user {partner_name}: {error}")
+
+        return success, response, error
 
 
 # Singleton instance

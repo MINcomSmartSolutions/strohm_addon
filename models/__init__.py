@@ -11,3 +11,4 @@ from . import partner_user_integrity
 from . import invoice_sync
 from . import sale_order_sync
 from . import ir_config_parameter
+from . import account_move_dunning
