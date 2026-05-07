@@ -33,12 +33,13 @@ class AccountMoveDunning(models.Model):
         """Override write to detect payment state changes and trigger reactivation."""
         res = super().write(vals)
 
-        if 'payment_state' in vals and vals['payment_state'] in ('paid', 'in_payment'):
-            paid_invoices = self.filtered(
-                lambda inv: inv.move_type == 'out_invoice' and inv.dunning_level != '0'
-            )
-            for invoice in paid_invoices:
-                invoice._on_invoice_paid()
+        #FIXME: This is not advisable at all, query on every change of an account.move is bad
+        #BUT for payment changes vals did not include that in the vals. So this is temp. here
+        paid_invoices = self.filtered(
+            lambda inv: inv.move_type == 'out_invoice' and inv.dunning_level != '0' and inv.payment_state == 'paid'
+        )
+        for invoice in paid_invoices:
+            invoice._on_invoice_paid()
 
         return res
 

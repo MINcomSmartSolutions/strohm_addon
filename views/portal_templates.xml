@@ -220,4 +220,40 @@
     <template id="remove_sale_order_contact_section" inherit_id="sale.sale_order_portal_template" name="Remove Sale Order Contact Section">
         <xpath expr="//div[@t-if='sale_order.user_id']" position="replace"/>
     </template>
+
+    <!-- Dunning: Override payment.form to block payment for Mahnstufe 3 customers -->
+    <template id="dunning_block_payment_form" inherit_id="payment.form" name="Dunning - Block Payment Form for M3">
+        <!-- Step 1: Resolve whether this partner is in finance handover (Mahnstufe 3).
+             `partner_id` is an integer in the payment form context. -->
+        <xpath expr="//t[@t-set='mode']" position="before">
+            <t t-set="finance_handover_blocked"
+               t-value="partner_id and env['res.partner'].sudo().browse(partner_id).finance_handover or False"/>
+        </xpath>
+
+        <!-- Step 2: Add `and not finance_handover_blocked` to the form's t-if so it
+             is hidden for blocked partners, triggering the t-else below. -->
+        <xpath expr="//form[@id='o_payment_form']" position="attributes">
+            <attribute name="t-if">(payment_methods_sudo or tokens_sudo) and not finance_handover_blocked</attribute>
+        </xpath>
+
+        <!-- Step 3: Replace the t-else block.
+             - If blocked       -> show dunning notice.
+             - Elif no methods  -> keep the original "no payment methods" warning.
+             - Otherwise        -> nothing (the form above is visible).
+             Using t-elif avoids the warning firing when finance_handover_blocked
+             is simply False but payment methods are available. -->
+        <xpath expr="//t[@t-call='payment.no_pms_available_warning']" position="replace">
+            <t t-if="finance_handover_blocked">
+                <div class="alert alert-danger" role="alert">
+                    <strong>Zahlung über das Portal nicht möglich</strong>
+                    <p class="mb-0 mt-2">
+                        Aufgrund offener Forderungen wurde Ihr Konto an die Finanzverwaltung übergeben.
+                        Eine Zahlung über das Nutzerportal ist daher nicht möglich.
+                        Bitte wenden Sie sich zur Begleichung der offenen Beträge direkt an die Finanzverwaltung
+                    </p>
+                </div>
+            </t>
+            <t t-elif="not (payment_methods_sudo or tokens_sudo)" t-call="payment.no_pms_available_warning"/>
+        </xpath>
+    </template>
 </odoo>
