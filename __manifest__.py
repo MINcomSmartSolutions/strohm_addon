@@ -26,6 +26,8 @@
     ],
     'data': [
         'views/portal_assets.xml',
+        'security/groups.xml',
+        'security/menu_access.xml',
         'security/ir.model.access.csv',
         'data/user_automations.xml',
         'data/invoice_sale_automations.xml',

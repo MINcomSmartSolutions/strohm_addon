@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <data noupdate="0">
+        <!-- Sales menus — accounting menus are already visible via account.group_account_readonly -->
+        <record id="sale.sale_menu_root" model="ir.ui.menu">
+            <field name="groups_id" eval="[(4, ref('strohm_addon.group_readonly_billing'))]"/>
+        </record>
+        <record id="sale.sale_order_menu" model="ir.ui.menu">
+            <field name="groups_id" eval="[(4, ref('strohm_addon.group_readonly_billing'))]"/>
+        </record>
+        <record id="sale.menu_sale_order" model="ir.ui.menu">
+            <field name="groups_id" eval="[(4, ref('strohm_addon.group_readonly_billing'))]"/>
+        </record>
+    </data>
+</odoo>
