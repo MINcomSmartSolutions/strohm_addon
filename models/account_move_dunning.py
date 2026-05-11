@@ -84,11 +84,11 @@ class AccountMoveDunning(models.Model):
         for invoice in overdue_invoices:
             days_overdue = (today - invoice.invoice_date_due).days
 
-            if days_overdue >= 90 and invoice.dunning_level in ('0', '1', '2'):
+            if days_overdue >= 90 and invoice.dunning_level == '2':
                 invoice._transition_to_m3()
                 m3_count += 1
 
-            elif days_overdue >= 60 and invoice.dunning_level in ('0', '1'):
+            elif days_overdue >= 60 and invoice.dunning_level == '1':
                 invoice._transition_to_m2()
                 m2_count += 1
 
@@ -96,8 +96,8 @@ class AccountMoveDunning(models.Model):
                 invoice._transition_to_m1()
                 m1_count += 1
 
-        # If any invoices reached M3, notify finance
         if m3_count > 0:
+            # TODO: Remove or add the functionality
             self._notify_finance_m3()
 
         _logger.info(
