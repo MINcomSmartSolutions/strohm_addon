@@ -24,6 +24,19 @@
         </xpath>
     </template>
 
+    <template id="portal_my_invoices_amount_total" name="Portal Invoices Amount Total"
+        inherit_id="account.portal_my_invoices" priority="40">
+        <xpath expr="//th[@name='amount_due']" position="before">
+            <th name="amount_total" class="text-end pe-3">Amount</th>
+        </xpath>
+        <xpath expr="//tbody//td[@class='text-end pe-3']" position="before">
+            <td class="text-end pe-3">
+                <span t-out="-invoice.amount_total if invoice.move_type == 'out_refund' else invoice.amount_total"
+                      t-options='{"widget": "monetary", "display_currency": invoice.currency_id}'/>
+            </td>
+        </xpath>
+    </template>
+
     <!-- Portal My Sessions - Charging Sessions List -->
     <template id="portal_my_sessions" name="My Charging Sessions">
         <t t-call="portal.portal_layout">

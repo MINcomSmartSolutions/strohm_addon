@@ -196,11 +196,11 @@
     <!-- Add external links to portal navbar -->
     <template id="custom_portal_navbar_links" inherit_id="web.frontend_layout" name="Custom Portal Navbar Links">
         <xpath expr="//ul[@id='top_menu']" position="inside">
-            <li class="nav-item">
-                <a href="https://backend.laden.hm.edu/faq" class="nav-link" target="_blank">FAQ</a>
+            <li class="nav-item" t-if="external_faq_url">
+                <a t-att-href="external_faq_url" class="nav-link" target="_blank" rel="noopener noreferrer">FAQ</a>
             </li>
-            <li class="nav-item">
-                <a href="https://backend.laden.hm.edu/agb" class="nav-link" target="_blank">AGB</a>
+            <li class="nav-item" t-if="external_agb_url">
+                <a t-att-href="external_agb_url" class="nav-link" target="_blank" rel="noopener noreferrer">AGB</a>
             </li>
         </xpath>
     </template>

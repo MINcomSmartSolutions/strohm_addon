@@ -169,7 +169,7 @@
             <xpath expr="//div[@id='payment_term']" position="after">
                 <div class="row mt-4">
                     <div class="col-12">
-                        <span>Gemäß § 19 UStG wird keine Umsatzsteuer berechnet.</span>
+                        <span>Es liegt kein steuerbarer Umsatz gemäß § 1 UStG vor.</span>
                     </div>
                 </div>
             </xpath>

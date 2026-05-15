@@ -207,6 +207,11 @@ msgid "Total"
 msgstr "Gesamt"
 
 #. module: strohm_addon
+#: model_terms:ir.ui.view,arch_db:strohm_addon.portal_my_invoices_amount_total
+msgid "Amount"
+msgstr "Betrag"
+
+#. module: strohm_addon
 #: model_terms:ir.ui.view,arch_db:strohm_addon.portal_my_sessions
 msgid "Status"
 msgstr "Status"

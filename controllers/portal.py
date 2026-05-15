@@ -285,6 +285,14 @@ class CustomCustomerPortal(CustomerPortal):
 
     def _prepare_portal_layout_values(self):
         portal_layout_values = super()._prepare_portal_layout_values()
+        external_url = (os.environ.get('BACKEND_EXTERNAL_URL') or '').strip()
+        if external_url:
+            portal_layout_values['external_faq_url'] = urls.url_join(external_url, '/faq')
+            portal_layout_values['external_agb_url'] = urls.url_join(external_url, '/agb')
+        else:
+            portal_layout_values['external_faq_url'] = False
+            portal_layout_values['external_agb_url'] = False
+
         try:
             price_eur_kwh, valid_till = self._get_electricity_price()
             if price_eur_kwh is not None:
